@@ -4,10 +4,10 @@ import locale
 import codecs
 import os
 from wikidot import Wikidot
+import hgpatch
 
 # TODO: Store page parent
 # TODO: Files.
-# TODO: Unicode commit messages.
 
 rawStdout = sys.stdout
 rawStderr = sys.stderr
@@ -129,6 +129,7 @@ elif args.dump:
 	ui=ui.ui()
 	commands.init(ui, args.dump)
 	repo = hg.repository(ui, args.dump)
+
 	
 	# Track page renames: name atm -> last name in repo
 	last_name = {}
@@ -166,15 +167,8 @@ elif args.dump:
 		else:
 			commit_date = None
 		print "Commiting: "+commit_msg
-		
-		# Things are a bit shit when it comes to commit messages.
-		# Mercurial.py accepts u'message' even on Python 2.7, EXCEPT it writes
-		# last-commit.txt naively, and fails.
-		# We can pre-encode u'message' to str, but then mojibake will be in actual log.
-		
-		# This is bad. Perphas we'd be better off just calling the command line version of it.
-		# At least it's Python3, so consistent.
 
-		commands.commit(ui, repo, message=commit_msg.encode('utf-8'), date=commit_date)
+
+		commands.commit(ui, repo, message=commit_msg, date=commit_date)
 
 
