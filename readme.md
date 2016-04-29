@@ -19,6 +19,10 @@ Wikidot code (very old) which simplifies things a bit:
 
 * https://github.com/gabrys/wikidot/blob/master/php/modules/history/PageRevisionListModule.php
 
+The descriptions for on-site modules are heavily correlated with AJAX ones:
+
+* http://www.wikidot.com/doc-modules:listpages-module
+
 Someone else did Wikidot AJAX:
 
 * https://github.com/kerel-fs/ogn-rdb/blob/master/wikidotcrawler.py
