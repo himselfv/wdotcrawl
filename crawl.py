@@ -9,7 +9,6 @@ from wikidot import Wikidot
   # Handle page name changes with revisions (at the very least, WD seems to track this)
 # TODO: Store page parent
 # TODO: Files.
-# TODO: Remove current query limit of 1
 # TODO: Unicode commit messages.
 
 rawStdout = sys.stdout
