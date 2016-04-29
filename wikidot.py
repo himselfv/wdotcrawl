@@ -20,8 +20,8 @@ class Wikidot:
 		# TODO: Implement with time.clock() and some kind of sleep
 		pass
 
-	# Makes a Wikidot AJAX query. Returns the response or throws an error.
-	def query(self, params):
+	# Makes a Wikidot AJAX query. Returns the response+title or throws an error.
+	def queryex(self, params):
 		token = "".join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(8))
 		cookies = {"wikidot_token7": token}
 		params['wikidot_token7'] = token
@@ -34,9 +34,13 @@ class Wikidot:
 		req = requests.request('POST', self.site+'/ajax-module-connector.php', data=params, cookies=cookies)
 		json = req.json()
 		if json['status'] == 'ok':
-			return json['body']
+			return json['body'], (json['title'] if 'title' in json else '')
 		else:
 			raise req.text
+
+	# Same but only returns the body, most responses don't have titles
+	def query(self, params):
+		return self.queryex(params)[0]
 
 
 	# List all pages for the site.
@@ -133,17 +137,47 @@ class Wikidot:
 		return revs
 
 
-	# Retrieves revision source for a revision
-
+	# Retrieves revision source for a revision.
+	# There's no raw version because there's nothing else in raw.
 	def get_revision_source(self, rev_id):
 		res = self.query({
 		  'moduleName': 'history/PageSourceModule',
 		  'revision_id': rev_id,
 		  # We don't need page id
 		})
-		soup = BeautifulSoup(res, 'html.parser')
 		# The source is HTMLified but BeautifulSoup's getText() will decode that
 		# - htmlentities
 		# - <br/>s in place of linebreaks
 		# - random real linebreaks (have to be ignored)
+		soup = BeautifulSoup(res, 'html.parser')
 		return soup.div.getText().lstrip(' \r\n')
+	
+	# Retrieves the rendered version + additional info unavailable in get_revision_source:
+	# * Title
+	# * Unixname at the time
+	def get_revision_version_raw(self, rev_id):
+		res = self.queryex({
+		  'moduleName': 'history/PageVersionModule',
+		  'revision_id': rev_id,
+		})
+		return res
+	
+	def get_revision_version(self, rev_id):
+		res = self.get_revision_version_raw(rev_id) # this has title!
+		soup = BeautifulSoup(res[0], 'html.parser')
+
+		# First table is a flyout with revision details. Remove and study it.
+		details = soup.find("div", attrs={"id": "page-version-info"}).extract()
+		unixname = None
+		for tr in details.find_all('tr'):
+			tds = tr.find_all('td')
+			if len(tds) < 2: continue
+			if tds[0].getText().strip() == 'Page name:':
+				unixname = tds[1].getText().strip()
+
+		return {
+		  'rev_id': rev_id,
+		  'unixname': unixname,
+		  'title': res[1],
+		  'content': unicode(soup), # only content remains
+		}

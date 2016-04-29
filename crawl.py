@@ -5,8 +5,6 @@ import codecs
 import os
 from wikidot import Wikidot
 
-# TODO: Store page title (subtitle?)
-  # Handle page name changes with revisions (at the very least, WD seems to track this)
 # TODO: Store page parent
 # TODO: Files.
 # TODO: Unicode commit messages.
@@ -21,8 +19,12 @@ parser.add_argument('site', help='URL of Wikidot site')
 # Actions
 parser.add_argument('--list-pages', action='store_true', help='List all pages on this site')
 parser.add_argument('--source', action='store_true', help='Print page source (requires --page)')
+parser.add_argument('--content', action='store_true', help='Print page content (requires --page)')
 parser.add_argument('--log', action='store_true', help='Print page revision log (requires --page)')
 parser.add_argument('--dump', type=str, help='Download page revisions to this directory')
+# Debug actions
+parser.add_argument('--list-pages-raw', action='store_true')
+parser.add_argument('--log-raw', action='store_true')
 # Action settings
 parser.add_argument('--page', type=str, help='Query only this page')
 parser.add_argument('--depth', type=int, default='10000', help='Query only last N revisions')
@@ -37,7 +39,10 @@ wd.debug = args.debug
 wd.delay = args.delay
 
 
-if args.list_pages:
+if args.list_pages_raw:
+	print wd.list_pages_raw(args.depth)
+
+elif args.list_pages:
 	for page in wd.list_pages(args.depth):
 		print page
 
@@ -51,6 +56,28 @@ elif args.source:
 	
 	revs = wd.get_revisions(page_id, 1) # last revision
 	print wd.get_revision_source(revs[0]['id'])
+
+elif args.content:
+	if not args.page:
+		raise "Please specify --page for --source."
+	
+	page_id = wd.get_page_id(args.page)
+	if not page_id:
+		raise "Page not found: "+args.page
+	
+	revs = wd.get_revisions(page_id, 1) # last revision
+	print wd.get_revision_version(revs[0]['id'])
+
+elif args.log_raw:
+	if not args.page:
+		raise "Please specify --page for --log."
+
+	page_id = wd.get_page_id(args.page)
+	if not page_id:
+		raise "Page not found: "+args.page
+
+	print wd.get_revisions_raw(page_id, args.depth)
+
 
 elif args.log:
 	if not args.page:
@@ -81,7 +108,7 @@ elif args.dump:
 			  'page_name' : page,
 			  'rev_id' : rev['id'],
 			  'date' : rev['date'],
-			  'comment' : rev['comment']
+			  'comment' : rev['comment'],
 			})
 	print ""
 
@@ -103,18 +130,37 @@ elif args.dump:
 	commands.init(ui, args.dump)
 	repo = hg.repository(ui, args.dump)
 	
+	# Track page renames: name atm -> last name in repo
+	last_name = {}
+	
 	print "Downloading revisions..."
 	for rev in all_revs:
-		page_source = wd.get_revision_source(rev['rev_id'])
-		fname = args.dump+'\\'+rev['page_name']+'.txt'
+		source = wd.get_revision_source(rev['rev_id'])
+		# Page title and unix_name changes are only available through another request:
+		details = wd.get_revision_version(rev['rev_id'])
+		
+		unixname = rev['page_name']
+		rev_unixname = details['unixname'] # may be different in revision than atm
+		
+		# If the page is tracked and its name just changed, tell HG
+		rename = (unixname in last_name) and (last_name[unixname] <> rev_unixname)
+		if rename:
+			commands.rename(ui, repo, args.dump+'\\'+str(last_name[unixname])+'.txt', args.dump+'\\'+str(rev_unixname)+'.txt')
+		
+		fname = args.dump+'\\'+rev_unixname+'.txt'
 		outp = codecs.open(fname, "w", "UTF-8")
-		outp.write(page_source)
+		outp.write('title:'+details['title']+'\n')
+		outp.write(source)
 		outp.close()
-		commands.add(ui, repo, str(fname))
+		
+		if not unixname in last_name: # never before seen
+			commands.add(ui, repo, str(fname))
+		last_name[unixname] = rev_unixname
+
 		if rev['comment'] <> '':
-			commit_msg = rev['page_name'] + ': ' + rev['comment']
+			commit_msg = rev_unixname + ': ' + rev['comment']
 		else:
-			commit_msg = rev['page_name']
+			commit_msg = rev_unixname
 		if rev['date']:
 			commit_date = str(rev['date']) + ' 0'
 		else:
@@ -130,4 +176,5 @@ elif args.dump:
 		# At least it's Python3, so consistent.
 
 		commands.commit(ui, repo, message=commit_msg.encode('utf-8'), date=commit_date)
+
 
