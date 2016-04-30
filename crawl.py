@@ -229,3 +229,4 @@ elif args.dump:
 		
 	# Delete operation state
 	os.remove(args.dump+'\\.wstate')
+	os.remove(args.dump+'\\.wrevs')
