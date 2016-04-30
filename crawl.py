@@ -3,13 +3,16 @@ import sys
 import locale
 import codecs
 import os
-from mercurial import commands, ui, hg, cmdutil
+from mercurial import commands, ui, hg
 import cPickle as pickle
 from wikidot import Wikidot
 import hgpatch
 
 # TODO: Store page parent
 # TODO: Files.
+# TODO: Delays.
+# TODO: Ability to download new transactions since last dump.
+#   We'll probably check the last revision time, then query all transactions and select those with greater revision time (not equal, since we would have downloaded equals at the previous dump)
 
 rawStdout = sys.stdout
 rawStderr = sys.stderr
@@ -30,7 +33,6 @@ parser.add_argument('--log-raw', action='store_true')
 # Action settings
 parser.add_argument('--page', type=str, help='Query only this page')
 parser.add_argument('--depth', type=int, default='10000', help='Query only last N revisions')
-parser.add_argument('--continue', dest='cont', action='store_true', help='Continue the --dump which was aborted')
 parser.add_argument('--revids', action='store_true', help='Store last revision ids in the repository')
 # Common settings
 parser.add_argument('--debug', action='store_true', help='Print debug info')
@@ -43,90 +45,12 @@ wd.debug = args.debug
 wd.delay = args.delay
 
 
-def hglog(repo, *args, **kwargs):
-	revs, expr, filematcher = cmdutil.getlogrevs(repo, args, kwargs)
-	return revs
-	
-# Inspects repository, matches wikidot page revisions to hg changesets.
-#  wdrevs: Wikidot revisions (of all relevant pages, sorted).
-#  hgrevs: Existing Mercurial revisions.
-# Rebuilds the last name dictionary. This is faster than querying Wikidot about each revision.
-def rebuild_last_names(wrevs, hgrevs):
-	if len(wrevs) < len(hgrevs):
-		raise Exception("More local revisions are available than there are revisions on the server. ")
-	
-
-	hgrevs = sorted(hgrevs)
-	last_names = {}
-
-	i = 0
-	for rev in hgrevs:
-		ctx = repo[rev]
-		
-		# Each revision in a compatible repo must contain at most one change to one file.
-		# Since we know its No, we can tell which file-atm it is.
-
-		unixname = wrevs[i]['page_name']
-		files = ctx.p1().status(ctx)
-		modified, added, removed = files[0], files[1], files[2]
-		
-		#print "%d. u:%s -> m:%s a:%s r:%s" % rev, unixname, ",".join(modified), ",".join(added), ",".join(removed)
-		print str(rev)+". u:"+unixname+" -> m:"+",".join(modified)+" a:"+",".join(added)+" r:"+",".join(removed)
-		
-		# remove special .revid file to not be included in counting
-		if (len(added) >= 1) and ('.revid' in added):
-			print "removing .revid from added"
-			added.remove('.revid')
-		if (len(modified) >= 1) and ('.revid' in modified):
-			print "removing .revid from modified"
-			modified.remove('.revid')
-		
-		if (len(modified) > 1) or (len(added) > 1) or (len(removed) > 1):
-			# It's not enough to test for len(added)+len(removed)+len(modified). Renames are tracked as add+remove == 2
-			raise Exception("Several files are modified in the hg revision "+str(ctx)+". ")
-		
-		
-		if len(modified) > 0:
-			fname = os.path.splitext(modified[0])
-			if fname[1] != '.txt':
-				raise Exception("Files other than .txt are modified in the hg revision "+str(ctx))
-			
-			# Since it's modification, the entry must be there
-			if not unixname in last_names:
-				raise Exception("Inconsistent modification in hg revision "+str(ctx)+": "+fname[0]+" modified, "
-					+"but matching wikidot revision mentions "+unixname+" which have not been seen before.")
-			last_names[unixname] = fname[0]
-			
-		elif len(added) > 0:
-			add_fname = os.path.splitext(added[0])
-			if add_fname[1] != '.txt':
-				raise Exception("Files other than .txt are modified in the hg revision "+str(ctx))
-			
-			# This covers both addition and rename (delete+add)
-			if len(removed) > 0: # rename
-				remove_fname = os.path.splitext(removed[0])
-				if remove_fname[1] != '.txt':
-					raise Exception("Files other than .txt are modified in the hg revision "+str(ctx))
-				
-				# Since it's rename, the entry must be there and contain old name
-				if not unixname in last_names:
-					raise Exception("Inconsistent rename in hg revision "+str(ctx)+": "+remove_fname[0]+" renamed, "
-						+"but matching wikidot revision mentions "+unixname+" for the first time.")
-				if last_names[unixname] <> remove_fname[0]:
-					raise Exception("Inconsistent rename in hg revision "+str(ctx)+": "+remove_fname[0]+" renamed, "
-						+"but matching wikidot revision of "+unixname+" has a different name ("+last_names[unixname]+") at the time.")
-				
-			else: # add
-				# Since it's addition, the entry must not be there
-				if unixname in last_names:
-					raise Exception("Inconsistent addition in hg revision "+str(ctx)+": "+add_fname[0]+" added, "
-						+"but matching wikidot revision mentions "+unixname+" which is already known.")
-
-			last_names[unixname] = add_fname[0]
-
-		i += 1
-	return last_names
-
+def force_dirs(path):
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != os.errno.EEXIST:
+            raise
 
 if args.list_pages_raw:
 	print wd.list_pages_raw(args.depth)
@@ -181,10 +105,11 @@ elif args.log:
 
 elif args.dump:
 	print "Downloading pages to "+args.dump
+	force_dirs(args.dump)
 	
-	if os.path.isfile(args.dump+'\\.hg\\.wrevs'):
+	if os.path.isfile(args.dump+'\\.wrevs'):
 		print "Loading cached revision list..."
-		fp = open(args.dump+'\\.hg\\.wrevs', 'rb')
+		fp = open(args.dump+'\\.wrevs', 'rb')
 		all_revs = pickle.load(fp)
 		fp.close()
 	else:
@@ -208,7 +133,7 @@ elif args.dump:
 				})
 
 		# Save a cached copy
-		fp = open(args.dump+'\\.hg\\.wrevs', 'wb')
+		fp = open(args.dump+'\\.wrevs', 'wb')
 		pickle.dump(all_revs, fp)
 		fp.close()
 		print ""
@@ -225,18 +150,21 @@ elif args.dump:
 			print str(rev)+"\n"
 		print ""
 
-	print "Initializing repository "+args.dump
-	from mercurial import commands, ui, hg
-	ui=ui.ui()
-	last_name = {} # Tracks page renames: name atm -> last name in repo
 
-	if args.cont:
+	# Create a new repository or continue from aborted dump
+	ui=ui.ui()
+	last_names = {} # Tracks page renames: name atm -> last name in repo
+
+	if os.path.isfile(args.dump+'\\.wstate'):
+		print "Continuing from aborted dump state..."
+		fp = open(args.dump+'\\.wstate', 'rb')
+		rev_no = pickle.load(fp)
+		last_names = pickle.load(fp)
+		fp.close()
 		repo = hg.repository(ui, args.dump)
-		hgrevs = hglog(repo)
-		last_name = rebuild_last_names(all_revs, hgrevs)
-		rev_no = len(hgrevs)
-	
-	else: # create a new repository
+
+	else: # create a new repository (will fail if one exists)
+		print "Initializing repository..."
 		commands.init(ui, args.dump)
 		repo = hg.repository(ui, args.dump)
 		rev_no = 0
@@ -246,7 +174,7 @@ elif args.dump:
 		codecs.open(fname, "w", "UTF-8").close()
 		commands.add(ui, repo, str(fname))
 
-	
+
 	print "Downloading revisions..."
 	while rev_no < len(all_revs):
 		rev = all_revs[rev_no]
@@ -266,9 +194,9 @@ elif args.dump:
 		rev_unixname = details['unixname'] # may be different in revision than atm
 		
 		# If the page is tracked and its name just changed, tell HG
-		rename = (unixname in last_name) and (last_name[unixname] <> rev_unixname)
+		rename = (unixname in last_names) and (last_names[unixname] <> rev_unixname)
 		if rename:
-			commands.rename(ui, repo, args.dump+'\\'+str(last_name[unixname])+'.txt', args.dump+'\\'+str(rev_unixname)+'.txt')
+			commands.rename(ui, repo, args.dump+'\\'+str(last_names[unixname])+'.txt', args.dump+'\\'+str(rev_unixname)+'.txt')
 		
 		fname = args.dump+'\\'+rev_unixname+'.txt'
 		outp = codecs.open(fname, "w", "UTF-8")
@@ -277,9 +205,9 @@ elif args.dump:
 		outp.write(source)
 		outp.close()
 		
-		if not unixname in last_name: # never before seen
+		if not unixname in last_names: # never before seen
 			commands.add(ui, repo, str(fname))
-		last_name[unixname] = rev_unixname
+		last_names[unixname] = rev_unixname
 
 		if rev['comment'] <> '':
 			commit_msg = rev_unixname + ': ' + rev['comment']
@@ -294,4 +222,11 @@ elif args.dump:
 		commands.commit(ui, repo, message=commit_msg, user=rev['user'], date=commit_date)
 		rev_no += 1
 
-
+		# Update operation state
+		fp = open(args.dump+'\\.wstate', 'wb')
+		pickle.dump(rev_no, fp)
+		pickle.dump(last_names, fp)
+		fp.close()
+		
+	# Delete operation state
+	os.remove(args.dump+'\\.wstate')
