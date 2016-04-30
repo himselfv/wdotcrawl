@@ -6,7 +6,6 @@ import time
 # Implements various queries to Wikidot engine through its AJAX facilities
 
 
-
 class Wikidot:
 	def __init__(self, site):
 		self.site = site		# Wikidot site to query
@@ -178,8 +177,8 @@ class Wikidot:
 		soup = BeautifulSoup(res[0], 'html.parser')
 
 		# First table is a flyout with revision details. Remove and study it.
-		details = soup.find("div", attrs={"id": "page-version-info"}).extract()
 		unixname = None
+		details = soup.find("div", attrs={"id": "page-version-info"}).extract()
 		for tr in details.find_all('tr'):
 			tds = tr.find_all('td')
 			if len(tds) < 2: continue
