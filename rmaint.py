@@ -154,7 +154,7 @@ class RepoMaintainer:
 	#
 	def commitNext(self):
 		if self.rev_no >= len(self.wrevs):
-			return false
+			return False
 			
 		rev = self.wrevs[self.rev_no]
 		source = self.wd.get_revision_source(rev['rev_id'])
@@ -191,7 +191,7 @@ class RepoMaintainer:
 		# If the page is renamed, in that same revision we must adjust all children.
 		# Though this will require us to parse children text (we have nowhere to regenerate it from).
 		if rev['comment'].startswith('Parent page set to: "'):
-			parent_unixname = rev['comment'][21:-1]
+			parent_unixname = rev['comment'][21:-2]
 		else:
 			parent_unixname = None
 		self.last_parents[unixname] = parent_unixname
