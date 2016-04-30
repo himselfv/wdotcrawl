@@ -7,6 +7,7 @@ from wikidot import Wikidot
 from rmaint import RepoMaintainer
 
 # TODO: Files.
+# TODO: Forum and comment pages.
 # TODO: Ability to download new transactions since last dump.
 #   We'll probably check the last revision time, then query all transactions and select those with greater revision time (not equal, since we would have downloaded equals at the previous dump)
 
@@ -114,3 +115,4 @@ elif args.dump:
 		pass
 	
 	rm.cleanup()
+	print "Done."
