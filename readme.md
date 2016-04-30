@@ -6,14 +6,16 @@ This is a Python command line client for relatively popular wiki hosting http://
 
 Most interestingly, it allows you to download the whole site as a Mercurial repository, with proper commit dates and comments!
 
-Examples:
+##### Examples:
 
     crawl.py http://example.wikidot.com --dump ExampleRepo
     crawl.py http://example.wikidot.com --log --page example-page
 
 It uses internal Wikidot AJAX requests to do it's job. If you're from Wikidot, please don't break it. Thank you! We'll try to be nice and not put a load on your servers.
 
-Useful links:
+Downloading of large sites might take a while. If anything breaks, just restart the same command, it'll continue from where it crashed.
+
+##### Useful links:
 
 Wikidot code (very old) which simplifies things a bit:
 
