@@ -10,7 +10,6 @@ import hgpatch
 
 # TODO: Store page parent
 # TODO: Files.
-# TODO: Delays.
 # TODO: Ability to download new transactions since last dump.
 #   We'll probably check the last revision time, then query all transactions and select those with greater revision time (not equal, since we would have downloaded equals at the previous dump)
 
@@ -36,7 +35,7 @@ parser.add_argument('--depth', type=int, default='10000', help='Query only last 
 parser.add_argument('--revids', action='store_true', help='Store last revision ids in the repository')
 # Common settings
 parser.add_argument('--debug', action='store_true', help='Print debug info')
-parser.add_argument('--delay', type=int, default='100', help='Delay between consequent calls to Wikidot (not implemented)')
+parser.add_argument('--delay', type=int, default='200', help='Delay between consequent calls to Wikidot')
 args = parser.parse_args()
 
 

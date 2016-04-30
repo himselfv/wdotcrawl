@@ -1,6 +1,7 @@
 import requests
 import random
 from bs4 import BeautifulSoup
+import time
 
 # Implements various queries to Wikidot engine through its AJAX facilities
 
@@ -9,15 +10,18 @@ from bs4 import BeautifulSoup
 class Wikidot:
 	def __init__(self, site):
 		self.site = site		# Wikidot site to query
-		self.delay = 100		# Delay between requests (not implemented)
+		self.delay = 200		# Delay between requests in msec
 		self.debug = False		# Print debug messages
+		self.next_timeslot = time.clock()	# Can call immediately
 
 
 	# To honor usage rules, we wait for self.delay between requests.
 	# Low-level query functions call this before every request to Wikidot./
 	def _wait_request_slot(self):
-		# Not implemented.
-		# TODO: Implement with time.clock() and some kind of sleep
+		tm = time.clock()
+		if self.next_timeslot - tm > 0:
+			time.sleep(self.next_timeslot - tm)
+		self.next_timeslot = tm + self.delay / 1000
 		pass
 
 	# Makes a Wikidot AJAX query. Returns the response+title or throws an error.
