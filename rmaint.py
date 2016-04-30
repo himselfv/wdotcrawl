@@ -142,10 +142,11 @@ class RepoMaintainer:
 			self.repo = hg.repository(self.ui, self.path)
 			self.rev_no = 0
 			
-			# Add revision id file to the new repo
-			fname = self.path+'\\.revid'
-			codecs.open(fname, "w", "UTF-8").close()
-			commands.add(self.ui, self.repo, str(fname))
+			if self.storeRevIds:
+				# Add revision id file to the new repo
+				fname = self.path+'\\.revid'
+				codecs.open(fname, "w", "UTF-8").close()
+				commands.add(self.ui, self.repo, str(fname))
 	
 	
 	#
