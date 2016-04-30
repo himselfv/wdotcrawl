@@ -135,6 +135,7 @@ elif args.dump:
 	last_name = {}
 	
 	print "Downloading revisions..."
+	commit_no = 0
 	for rev in all_revs:
 		source = wd.get_revision_source(rev['rev_id'])
 		# Page title and unix_name changes are only available through another request:
@@ -150,7 +151,8 @@ elif args.dump:
 		
 		fname = args.dump+'\\'+rev_unixname+'.txt'
 		outp = codecs.open(fname, "w", "UTF-8")
-		outp.write('title:'+details['title']+'\n')
+		if details['title']:
+			outp.write('title:'+details['title']+'\n')
 		outp.write(source)
 		outp.close()
 		
@@ -166,9 +168,9 @@ elif args.dump:
 			commit_date = str(rev['date']) + ' 0'
 		else:
 			commit_date = None
-		print "Commiting: "+commit_msg
-
+		print "Commiting: "+str(commit_no)+'. '+commit_msg
 
 		commands.commit(ui, repo, message=commit_msg, date=commit_date)
+		commit_no += 1
 
 
