@@ -199,6 +199,7 @@ class RepoMaintainer:
 		# If the page is tracked and its name just changed, tell HG
 		rename = (unixname in self.last_names) and (self.last_names[unixname] <> rev_unixname)
 		if rename:
+			self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
 			commands.rename(self.ui, self.repo, self.path+'\\'+str(self.last_names[unixname])+'.txt', self.path+'\\'+str(rev_unixname)+'.txt')
 		
 		# Ouput contents
@@ -214,10 +215,6 @@ class RepoMaintainer:
 		# Add new page
 		if not unixname in self.last_names: # never before seen
 			commands.add(self.ui, self.repo, str(fname))
-
-		# Update children which reference us -- see comments there
-		if rename:
-			self.updateChildren(self.last_names[unixname], rev_unixname)
 
 		self.last_names[unixname] = rev_unixname
 
@@ -249,9 +246,9 @@ class RepoMaintainer:
 	# Therefore, on every rename we must update all linked children in the same revision.
 	#
 	def updateChildren(self, oldunixname, newunixname):
-		for child in self.last_parents.keys:
-			if self.last_parents[child] == self.last_names[unixname]:
-				self.updateParentField(child, self.last_parents[child], rev_unixname)
+		for child in self.last_parents.keys():
+			if self.last_parents[child] == oldunixname:
+				self.updateParentField(child, self.last_parents[child], newunixname)
 	
 	#
 	# Processes a page file and updates "parent:..." string to reflect a change in parent's unixname.
