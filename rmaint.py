@@ -175,27 +175,14 @@ class RepoMaintainer:
 		
 		# Unfortunately, there's no exposed way in Wikidot to see page breadcrumbs at any point in history.
 		# The only way to know they were changed is revision comments, though evil people may trick us.
-
-		# BUT!
-		# If we set parent page (this is registered in revision log),
-		# then rename parent page
-		# then the child page still links to the correct parent, though no adjustment entry exists in the revision log.
-		
-		# This seems to be impossible to correct.
-		# Even if there existed a way to get exact parent page info from a revision,
-		# even if there existed a way to get exact parent page info for any page at any point of time,
-		# we would still have to check ALL pages on EVERY revisions.
-		
-		# Though... now that I think about it... we could be smart!
-		# We can keep track of parent pages for every page we've seen.
-		# Then we know all children of every page.
-		# If the page is renamed, in that same revision we must adjust all children.
-		# Though this will require us to parse children text (we have nowhere to regenerate it from).
 		if rev['comment'].startswith('Parent page set to: "'):
+			# This is a parenting revision, remember the new parent
 			parent_unixname = rev['comment'][21:-2]
+			self.last_parents[unixname] = parent_unixname
 		else:
-			parent_unixname = None
-		self.last_parents[unixname] = parent_unixname
+			# Else use last parent_unixname we've recorded
+			parent_unixname =  self.last_parents[unixname] if unixname in self.last_parents else None
+		# There are also problems when parent page gets renamed -- see updateChildren
 		
 		# If the page is tracked and its name just changed, tell HG
 		rename = (unixname in self.last_names) and (self.last_names[unixname] <> rev_unixname)
@@ -256,15 +243,15 @@ class RepoMaintainer:
 	# The rest of the file is preserved.
 	#
 	def updateParentField(self, child_unixname, parent_oldunixname, parent_newunixname):
-		with codecs.open(self.path+'\\'+fname+'.txt', "r", "UTF-8") as f:
+		with codecs.open(self.path+'\\'+child_unixname+'.txt', "r", "UTF-8") as f:
 			content = f.readlines()
 		# Since this is all tracked by us, we KNOW there's a line in standard format somewhere
-		idx = content.index('parent:'+parent_oldunixname)
+		idx = content.index('parent:'+parent_oldunixname+'\n')
 		if idx < 0:
 			raise Exception("Cannot update child page "+child_unixname+": "
 				+"it is expected to have parent set to "+parent_oldunixname+", but there seems to be no such record in it.");
-		content[idx] = 'parent:'+parent_newunixname
-		with codecs.open(self.path+'\\'+fname+'.txt', "w", "UTF-8") as f:
+		content[idx] = 'parent:'+parent_newunixname+'\n'
+		with codecs.open(self.path+'\\'+child_unixname+'.txt', "w", "UTF-8") as f:
 			f.writelines(content)
 
 
