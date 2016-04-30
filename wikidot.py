@@ -124,14 +124,21 @@ class Wikidot:
 					if cls.startswith('time_'):
 						rev_date = int(cls[5:])
 
+			# Username in a last <a> under <span class="printuser">
+			user_span = tr.find("span", attrs={"class": "printuser"})
+			for last_a in user_span.find_all('a'): pass
+			rev_user = last_a.getText() if last_a else None
+			
+
 			# Comment is in the last TD of the row
 			last_td = None
-			for last_td in tr.find_all('td'):pass
+			for last_td in tr.find_all('td'): pass
 			rev_comment = last_td.getText() if last_td else ""
 
 			revs.append({
 				'id': rev_id,
 				'date': rev_date,
+				'user': rev_user,
 				'comment': rev_comment,
 			})
 		return revs

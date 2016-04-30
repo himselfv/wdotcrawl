@@ -108,6 +108,7 @@ elif args.dump:
 			  'page_name' : page,
 			  'rev_id' : rev['id'],
 			  'date' : rev['date'],
+			  'user' : rev['user'],
 			  'comment' : rev['comment'],
 			})
 	print ""
@@ -170,7 +171,7 @@ elif args.dump:
 			commit_date = None
 		print "Commiting: "+str(commit_no)+'. '+commit_msg
 
-		commands.commit(ui, repo, message=commit_msg, date=commit_date)
+		commands.commit(ui, repo, message=commit_msg, user=rev['user'], date=commit_date)
 		commit_no += 1
 
 
