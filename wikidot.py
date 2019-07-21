@@ -26,7 +26,7 @@ class Wikidot:
         pass
 
     # Makes a Wikidot AJAX query. Returns the response+title or throws an error.
-    def queryex(self, params):
+    def queryex(self, params, urlAppend = None):
         token = "".join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(8))
         cookies = {"wikidot_token7": token}
         params['wikidot_token7'] = token
@@ -36,17 +36,22 @@ class Wikidot:
             print(cookies)
 
         self._wait_request_slot()
-        req = requests.request('POST', self.site+'/ajax-module-connector.php', data=params, cookies=cookies)
+        url = self.site+'/ajax-module-connector.php'
+        if urlAppend is not None:
+            url += urlAppend
+        print('url', url)
+        req = requests.request('POST', url, data=params, cookies=cookies)
         json = req.json()
 
+        print(json)
         if json['status'] == 'ok':
             return json['body'], (json['title'] if 'title' in json else '')
         else:
             raise req.text
 
     # Same but only returns the body, most responses don't have titles
-    def query(self, params):
-        return self.queryex(params)[0]
+    def query(self, params, urlAppend = None):
+        return self.queryex(params, urlAppend)[0]
 
 
     # List all pages for the site.
@@ -54,26 +59,61 @@ class Wikidot:
     # Raw version
     # For the supported formats (module_body) see:
     # See https://github.com/gabrys/wikidot/blob/master/php/modules/list/ListPagesModule.php
-    def list_pages_raw(self, limit):
+    def list_pages_raw(self, limit, offset):
         res = self.query({
           'moduleName': 'list/ListPagesModule',
           'limit': limit if limit else '10000',
           'perPage': limit if limit else '10000',
           'module_body': '%%page_unix_name%%',
           'separate': 'false',
+          'p': str(offset),
           'order': 'dateCreatedDesc',  # This way limit makes sense. This is also the default
-        })
+        }, '/p/' + str(offset))
         return res
 
     # Client version
     def list_pages(self, limit):
-        raw = self.list_pages_raw(limit).replace('<br/>',"\n")
-        soup = BeautifulSoup(raw, 'html.parser')
+        offset = 1
         pages = []
-        for entry in soup.div.p.text.split('\n'):
-            pages.append(entry)
-        if self.debug:
-            print('Pages found:', len(pages))
+
+        while True:
+            raw = self.list_pages_raw(limit, offset).replace('<br/>',"\n")
+            soup = BeautifulSoup(raw, 'html.parser')
+
+
+            for entry in soup.div.p.text.split('\n'):
+                pages.append(entry)
+            if self.debug:
+                print('Pages found:', len(pages))
+
+            targets = soup.find_all('span','target')
+            if len(targets) < 2:
+                print("unable to find next target")
+                break
+
+            next_url = targets[-1].a.get('href').split('/')
+            if len(next_url) > 0 and next_url[-1].isnumeric():
+                next_page = int(next_url[-1])
+                print('next page', next_page)
+            else:
+                print("invalid next url", next_url)
+                break
+
+            #next_page = int(targets[0].a.text)
+
+            current_spans = soup.find_all('span','current')
+            if len(current_spans) > 0:
+                current_page = int(current_spans[0].text)
+                print('current page', current_page)
+            else:
+                print("unable to find current page")
+                break;
+
+            if next_page != offset + 1:
+                print('next page is wrong', next_page)
+                break
+
+            offset += 1
         return pages
 
 
