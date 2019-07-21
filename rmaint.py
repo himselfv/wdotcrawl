@@ -189,7 +189,7 @@ class RepoMaintainer:
             parent_unixname =  self.last_parents[unixname] if unixname in self.last_parents else None
         # There are also problems when parent page gets renamed -- see updateChildren
 
-        # If the page is tracked and its name just changed, tell HG
+        # If the page is tracked and its name just changed, tell Git
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
         if rename:
             if self.debug:
@@ -221,7 +221,7 @@ class RepoMaintainer:
         if rev['comment'] != '':
             commit_msg = rev_unixname + ': ' + rev['comment']
         else:
-            commit_msg = rev_unixname
+            commit_msg = 'Updated ' + rev_unixname + ' (no message)'
         if rev['date']:
             parsed_time = time.gmtime(int(rev['date'])) # TODO: assumes GMT
             commit_date = time.strftime('%Y-%m-%d %H:%M:%S', parsed_time)
