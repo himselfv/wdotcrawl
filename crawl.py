@@ -38,11 +38,7 @@ wd.delay = args.delay
 
 
 def force_dirs(path):
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != os.errno.EEXIST:
-            raise exception
+    os.makedirs(path, exist_ok=True)
 
 if args.list_pages_raw:
     print((wd.list_pages_raw(args.depth)))
@@ -98,16 +94,16 @@ elif args.log:
 elif args.dump:
     print(("Downloading pages to "+args.dump))
     force_dirs(args.dump)
-    
+
     rm = RepoMaintainer(wd, args.dump)
     rm.debug = args.debug
     rm.storeRevIds = args.revids
     rm.buildRevisionList([args.page] if args.page else None, args.depth)
     rm.openRepo()
-    
+
     print("Downloading revisions...")
     while rm.commitNext():
         pass
-    
+
     rm.cleanup()
     print("Done.")
