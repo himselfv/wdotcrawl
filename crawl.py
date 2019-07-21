@@ -11,11 +11,6 @@ from rmaint import RepoMaintainer
 # TODO: Ability to download new transactions since last dump.
 #   We'll probably check the last revision time, then query all transactions and select those with greater revision time (not equal, since we would have downloaded equals at the previous dump)
 
-rawStdout = sys.stdout
-rawStderr = sys.stderr
-sys.stdout = codecs.getwriter(locale.getpreferredencoding())(sys.stdout, 'xmlcharrefreplace')
-sys.stderr = codecs.getwriter(locale.getpreferredencoding())(sys.stderr, 'xmlcharrefreplace')
-
 parser = argparse.ArgumentParser(description='Queries Wikidot')
 parser.add_argument('site', help='URL of Wikidot site')
 # Actions
