@@ -17,7 +17,7 @@ import codecs
 old_fromlocal = None
 
 def better_fromlocal(s):
-	if isinstance(s, unicode):
+	if isinstance(s, str):
 		return s.encode('utf-8')
 	global old_fromlocal
 	return old_fromlocal(s)

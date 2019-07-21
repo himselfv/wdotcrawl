@@ -2,7 +2,7 @@ import os
 import codecs
 from mercurial import commands, ui, hg
 import hgpatch
-import cPickle as pickle
+import pickle as pickle
 import wikidot
 
 # Repository builder and maintainer
@@ -60,19 +60,19 @@ class RepoMaintainer:
 	#
 	def buildRevisionList(self, pages = None, depth = 10000):
 		if os.path.isfile(self.path+'\\.wrevs'):
-			print "Loading cached revision list..."
+			print("Loading cached revision list...")
 			self.loadWRevs()
 		else:
-			print "Building revision list..."
+			print("Building revision list...")
 			if not pages:
 				pages = self.wd.list_pages(10000)
 			self.wrevs = []
 			for page in pages:
-				print "Querying page: "+page
+				print(("Querying page: "+page))
 				page_id = self.wd.get_page_id(page)
-				print "ID: "+str(page_id)
+				print(("ID: "+str(page_id)))
 				revs = self.wd.get_revisions(page_id, depth)
-				print "Revisions: "+str(len(revs))
+				print(("Revisions: "+str(len(revs))))
 				for rev in revs:
 					self.wrevs.append({
 					  'page_id' : page_id,
@@ -83,20 +83,20 @@ class RepoMaintainer:
 					  'comment' : rev['comment'],
 					})
 			self.saveWRevs() # Save a cached copy
-			print ""
+			print("")
 		
 		
-		print "Total revisions: "+str(len(self.wrevs))
+		print(("Total revisions: "+str(len(self.wrevs))))
 		
-		print "Sorting revisions..."
+		print("Sorting revisions...")
 		self.wrevs.sort(key=lambda rev: rev['date'])
-		print ""
+		print("")
 		
 		if self.debug:
-			print "Revision list: "
+			print("Revision list: ")
 			for rev in self.wrevs:
-				print str(rev)+"\n"
-			print ""
+				print((str(rev)+"\n"))
+			print("")
 
 
 	#
@@ -132,12 +132,12 @@ class RepoMaintainer:
 		self.last_parents = {} # Tracks page parent names: name atm -> last parent in repo
 		
 		if os.path.isfile(self.path+'\\.wstate'):
-			print "Continuing from aborted dump state..."
+			print("Continuing from aborted dump state...")
 			self.loadState()
 			self.repo = hg.repository(self.ui, self.path)
 		
 		else: # create a new repository (will fail if one exists)
-			print "Initializing repository..."
+			print("Initializing repository...")
 			commands.init(self.ui, self.path)
 			self.repo = hg.repository(self.ui, self.path)
 			self.rev_no = 0
@@ -185,7 +185,7 @@ class RepoMaintainer:
 		# There are also problems when parent page gets renamed -- see updateChildren
 		
 		# If the page is tracked and its name just changed, tell HG
-		rename = (unixname in self.last_names) and (self.last_names[unixname] <> rev_unixname)
+		rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
 		if rename:
 			self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
 			commands.rename(self.ui, self.repo, self.path+'\\'+str(self.last_names[unixname])+'.txt', self.path+'\\'+str(rev_unixname)+'.txt')
@@ -207,7 +207,7 @@ class RepoMaintainer:
 		self.last_names[unixname] = rev_unixname
 
 		# Commit
-		if rev['comment'] <> '':
+		if rev['comment'] != '':
 			commit_msg = rev_unixname + ': ' + rev['comment']
 		else:
 			commit_msg = rev_unixname
@@ -215,7 +215,7 @@ class RepoMaintainer:
 			commit_date = str(rev['date']) + ' 0'
 		else:
 			commit_date = None
-		print "Commiting: "+str(self.rev_no)+'. '+commit_msg
+		print(("Commiting: "+str(self.rev_no)+'. '+commit_msg))
 
 		commands.commit(self.ui, self.repo, message=commit_msg, user=rev['user'], date=commit_date)
 		self.rev_no += 1
@@ -234,7 +234,7 @@ class RepoMaintainer:
 	# Therefore, on every rename we must update all linked children in the same revision.
 	#
 	def updateChildren(self, oldunixname, newunixname):
-		for child in self.last_parents.keys():
+		for child in list(self.last_parents.keys()):
 			if self.last_parents[child] == oldunixname:
 				self.updateParentField(child, self.last_parents[child], newunixname)
 	

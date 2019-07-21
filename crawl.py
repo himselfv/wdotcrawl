@@ -50,7 +50,7 @@ def force_dirs(path):
             raise exception
 
 if args.list_pages_raw:
-	print(wd.list_pages_raw(args.depth))
+	print((wd.list_pages_raw(args.depth)))
 
 elif args.list_pages:
 	for page in wd.list_pages(args.depth):
@@ -65,7 +65,7 @@ elif args.source:
 		raise Exception("Page not found: "+args.page)
 	
 	revs = wd.get_revisions(page_id, 1) # last revision
-	print(wd.get_revision_source(revs[0]['id']))
+	print((wd.get_revision_source(revs[0]['id'])))
 
 elif args.content:
 	if not args.page:
@@ -76,7 +76,7 @@ elif args.content:
 		raise Exception("Page not found: "+args.page)
 	
 	revs = wd.get_revisions(page_id, 1) # last revision
-	print(wd.get_revision_version(revs[0]['id']))
+	print((wd.get_revision_version(revs[0]['id'])))
 
 elif args.log_raw:
 	if not args.page:
@@ -86,7 +86,7 @@ elif args.log_raw:
 	if not page_id:
 		raise Exception("Page not found: "+args.page)
 
-	print(wd.get_revisions_raw(page_id, args.depth))
+	print((wd.get_revisions_raw(page_id, args.depth)))
 
 
 elif args.log:
@@ -97,11 +97,11 @@ elif args.log:
 	if not page_id:
 		raise Exception("Page not found: "+args.page)
 	for rev in wd.get_revisions(page_id, args.depth):
-		print(str(rev))
+		print((str(rev)))
 
 
 elif args.dump:
-	print("Downloading pages to "+args.dump)
+	print(("Downloading pages to "+args.dump))
 	force_dirs(args.dump)
 	
 	rm = RepoMaintainer(wd, args.dump)
