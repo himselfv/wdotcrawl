@@ -4,7 +4,7 @@ This is a Python command line client for relatively popular wiki hosting http://
 * See all revisions of a page
 * Query page source
 
-Most interestingly, it allows you to download the whole site as a Mercurial repository, with proper commit dates and comments!
+Most interestingly, it allows you to download the whole site as a Git repository, with proper commit dates, author and comments!
 
 ##### Examples:
 
