@@ -47,7 +47,7 @@ def force_dirs(path):
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != os.errno.EEXIST:
-            raise
+            raise exception
 
 if args.list_pages_raw:
 	print wd.list_pages_raw(args.depth)
@@ -58,44 +58,44 @@ elif args.list_pages:
 
 elif args.source:
 	if not args.page:
-		raise "Please specify --page for --source."
+		raise Exception("Please specify --page for --source."
 	
 	page_id = wd.get_page_id(args.page)
 	if not page_id:
-		raise "Page not found: "+args.page
+		raise Exception("Page not found: "+args.page)
 	
 	revs = wd.get_revisions(page_id, 1) # last revision
 	print wd.get_revision_source(revs[0]['id'])
 
 elif args.content:
 	if not args.page:
-		raise "Please specify --page for --source."
+		raise Exception("Please specify --page for --source.")
 	
 	page_id = wd.get_page_id(args.page)
 	if not page_id:
-		raise "Page not found: "+args.page
+		raise Exception("Page not found: "+args.page)
 	
 	revs = wd.get_revisions(page_id, 1) # last revision
 	print wd.get_revision_version(revs[0]['id'])
 
 elif args.log_raw:
 	if not args.page:
-		raise "Please specify --page for --log."
+		raise Exception("Please specify --page for --log.")
 
 	page_id = wd.get_page_id(args.page)
 	if not page_id:
-		raise "Page not found: "+args.page
+		raise Exception("Page not found: "+args.page)
 
 	print wd.get_revisions_raw(page_id, args.depth)
 
 
 elif args.log:
 	if not args.page:
-		raise "Please specify --page for --log."
+		raise Exception("Please specify --page for --log.")
 
 	page_id = wd.get_page_id(args.page)
 	if not page_id:
-		raise "Page not found: "+args.page
+		raise Exception("Page not found: "+args.page)
 	for rev in wd.get_revisions(page_id, args.depth):
 		print unicode(rev)
 
