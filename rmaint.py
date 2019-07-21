@@ -46,12 +46,12 @@ class RepoMaintainer:
     # Saves and loads revision list from file
     #
     def saveWRevs(self):
-        fp = open(self.path+'\\.wrevs', 'wb')
+        fp = open(self.path+'/.wrevs', 'wb')
         pickle.dump(self.wrevs, fp)
         fp.close()
-    
+
     def loadWRevs(self):
-        fp = open(self.path+'\\.wrevs', 'rb')
+        fp = open(self.path+'/.wrevs', 'rb')
         self.wrevs = pickle.load(fp)
         fp.close()
 
@@ -64,7 +64,7 @@ class RepoMaintainer:
     # it is loaded and no requests are made.
     #
     def buildRevisionList(self, pages = None, depth = 10000):
-        if os.path.isfile(self.path+'\\.wrevs'):
+        if os.path.isfile(self.path+'/.wrevs'):
             print("Loading cached revision list...")
             self.loadWRevs()
         else:
@@ -108,14 +108,14 @@ class RepoMaintainer:
     # Saves and loads operational state from file
     #
     def saveState(self):
-        fp = open(self.path+'\\.wstate', 'wb')
+        fp = open(self.path+'/.wstate', 'wb')
         pickle.dump(self.rev_no, fp)
         pickle.dump(self.last_names, fp)
         pickle.dump(self.last_parents, fp)
         fp.close()
     
     def loadState(self):
-        fp = open(self.path+'\\.wstate', 'rb')
+        fp = open(self.path+'/.wstate', 'rb')
         self.rev_no = pickle.load(fp)
         self.last_names = pickle.load(fp)
         try:
@@ -134,8 +134,8 @@ class RepoMaintainer:
         # Create a new repository or continue from aborted dump
         self.last_names = {} # Tracks page renames: name atm -> last name in repo
         self.last_parents = {} # Tracks page parent names: name atm -> last parent in repo
-        
-        if os.path.isfile(self.path+'\\.wstate'):
+
+        if os.path.isfile(self.path+'/.wstate'):
             print("Continuing from aborted dump state...")
             self.loadState()
             self.repo = Repo(self.path)
@@ -170,7 +170,7 @@ class RepoMaintainer:
         # Store revision_id for last commit
         # Without this, empty commits (e.g. file uploads) will be skipped by Git
         if self.storeRevIds:
-            fname = self.path+'\\.revid'
+            fname = self.path+'/.revid'
             outp = codecs.open(fname, "w", "UTF-8")
             outp.write(rev['rev_id']) # rev_ids are unique amongst all pages, and only one page changes in each commit anyway
             outp.close()
@@ -192,12 +192,15 @@ class RepoMaintainer:
         # If the page is tracked and its name just changed, tell HG
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
         if rename:
+            if self.debug:
+                print("moving", str(self.last_names[unixname])+'.txt', +str(rev_unixname)+'.txt')
+
             self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
             self.index.move([str(self.last_names[unixname])+'.txt', +str(rev_unixname)+'.txt'])
 
         # Ouput contents
-        fname = self.path+'\\'+rev_unixname+'.txt'
-        outp = codecs.open(fname, "w", "UTF-8")
+        fname = rev_unixname+'.txt'
+        outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
         if details['title']:
             outp.write('title:'+details['title']+'\n')
         if parent_unixname:
@@ -233,6 +236,9 @@ class RepoMaintainer:
         commit = self.index.commit(commit_msg, author=author, commit_date=commit_date)
         self.rev_no += 1
 
+        if self.debug:
+            print('committed', commit.name_rev, 'by', author)
+
         self.saveState() # Update operation state
         return True
 
@@ -250,13 +256,13 @@ class RepoMaintainer:
         for child in list(self.last_parents.keys()):
             if self.last_parents[child] == oldunixname:
                 self.updateParentField(child, self.last_parents[child], newunixname)
-    
+
     #
     # Processes a page file and updates "parent:..." string to reflect a change in parent's unixname.
     # The rest of the file is preserved.
     #
     def updateParentField(self, child_unixname, parent_oldunixname, parent_newunixname):
-        with codecs.open(self.path+'\\'+child_unixname+'.txt', "r", "UTF-8") as f:
+        with codecs.open(self.path+'/'+child_unixname+'.txt', "r", "UTF-8") as f:
             content = f.readlines()
         # Since this is all tracked by us, we KNOW there's a line in standard format somewhere
         idx = content.index('parent:'+parent_oldunixname+'\n')
@@ -264,7 +270,7 @@ class RepoMaintainer:
             raise Exception("Cannot update child page "+child_unixname+": "
                 +"it is expected to have parent set to "+parent_oldunixname+", but there seems to be no such record in it.");
         content[idx] = 'parent:'+parent_newunixname+'\n'
-        with codecs.open(self.path+'\\'+child_unixname+'.txt', "w", "UTF-8") as f:
+        with codecs.open(self.path+'/'+child_unixname+'.txt', "w", "UTF-8") as f:
             f.writelines(content)
 
 
@@ -272,5 +278,5 @@ class RepoMaintainer:
     # Finalizes the construction process and deletes any temporary files.
     #
     def cleanup(self):
-        os.remove(self.path+'\\.wstate')
-        os.remove(self.path+'\\.wrevs')
+        os.remove(self.path+'/.wstate')
+        os.remove(self.path+'/.wrevs')
