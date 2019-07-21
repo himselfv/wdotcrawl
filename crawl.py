@@ -58,7 +58,7 @@ elif args.list_pages:
 
 elif args.source:
 	if not args.page:
-		raise Exception("Please specify --page for --source."
+		raise Exception("Please specify --page for --source.")
 	
 	page_id = wd.get_page_id(args.page)
 	if not page_id:
