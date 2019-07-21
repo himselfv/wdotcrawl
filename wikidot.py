@@ -2,6 +2,7 @@ import requests
 import random
 from bs4 import BeautifulSoup
 import time
+from urllib.parse import urlparse
 
 # Implements various queries to Wikidot engine through its AJAX facilities
 
@@ -9,6 +10,7 @@ import time
 class Wikidot:
     def __init__(self, site):
         self.site = site        # Wikidot site to query
+        self.sitename = urlparse(site).hostname.lower()
         self.delay = 200        # Delay between requests in msec
         self.debug = False      # Print debug messages
         self.next_timeslot = time.clock()   # Can call immediately
@@ -28,7 +30,7 @@ class Wikidot:
         token = "".join(random.choice('abcdefghijklmnopqrstuvwxyz0123456789') for i in range(8))
         cookies = {"wikidot_token7": token}
         params['wikidot_token7'] = token
-    
+
         if self.debug:
             print(params)
             print(cookies)
@@ -36,6 +38,7 @@ class Wikidot:
         self._wait_request_slot()
         req = requests.request('POST', self.site+'/ajax-module-connector.php', data=params, cookies=cookies)
         json = req.json()
+
         if json['status'] == 'ok':
             return json['body'], (json['title'] if 'title' in json else '')
         else:
@@ -105,7 +108,7 @@ class Wikidot:
           'perpage': limit if limit else '10000',
           'options': '{"all":true}'
         })
-        
+
         soup = BeautifulSoup(res, 'html.parser')
         return soup.table.contents
 
@@ -131,7 +134,7 @@ class Wikidot:
             user_span = tr.find("span", attrs={"class": "printuser"})
             for last_a in user_span.find_all('a'): pass
             rev_user = last_a.getText() if last_a else None
-            
+
 
             # Comment is in the last TD of the row
             last_td = None
@@ -161,7 +164,7 @@ class Wikidot:
         # - random real linebreaks (have to be ignored)
         soup = BeautifulSoup(res, 'html.parser')
         return soup.div.getText().lstrip(' \r\n')
-    
+
     # Retrieves the rendered version + additional info unavailable in get_revision_source:
     # * Title
     # * Unixname at the time
@@ -171,7 +174,7 @@ class Wikidot:
           'revision_id': rev_id,
         })
         return res
-    
+
     def get_revision_version(self, rev_id):
         res = self.get_revision_version_raw(rev_id) # this has title!
         soup = BeautifulSoup(res[0], 'html.parser')
