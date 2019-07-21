@@ -17,10 +17,10 @@ import codecs
 old_fromlocal = None
 
 def better_fromlocal(s):
-	if isinstance(s, str):
-		return s.encode('utf-8')
-	global old_fromlocal
-	return old_fromlocal(s)
+    if isinstance(s, str):
+        return s.encode('utf-8')
+    global old_fromlocal
+    return old_fromlocal(s)
 
 old_fromlocal = encoding.fromlocal
 encoding.fromlocal = better_fromlocal
@@ -35,13 +35,13 @@ encoding.fromlocal = better_fromlocal
 old_vfs_call = None
 
 def better_vfs_call(self, path, mode="r", text=False, atomictemp=False, notindexed=False, backgroundclose=False):
-	fp = old_vfs_call(self, path, mode, text, atomictemp, notindexed, backgroundclose)
-	if path.endswith('last-message.txt'):
-		# Create a wrapper like codecs.open does:
-		info = codecs.lookup("utf-8")
-		fp = codecs.StreamReaderWriter(fp, info.streamreader, info.streamwriter, 'strict')
-		fp.encoding = 'utf-8'
-	return fp
+    fp = old_vfs_call(self, path, mode, text, atomictemp, notindexed, backgroundclose)
+    if path.endswith('last-message.txt'):
+        # Create a wrapper like codecs.open does:
+        info = codecs.lookup("utf-8")
+        fp = codecs.StreamReaderWriter(fp, info.streamreader, info.streamwriter, 'strict')
+        fp.encoding = 'utf-8'
+    return fp
 
 old_vfs_call = scmutil.vfs.__call__
 scmutil.vfs.__call__ = better_vfs_call
