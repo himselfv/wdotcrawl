@@ -72,6 +72,8 @@ class Wikidot:
         pages = []
         for entry in soup.div.p.text.split('\n'):
             pages.append(entry)
+        if self.debug:
+            print('Pages found:', len(pages))
         return pages
 
 

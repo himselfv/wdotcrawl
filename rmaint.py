@@ -193,10 +193,10 @@ class RepoMaintainer:
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
         if rename:
             if self.debug:
-                print("moving", str(self.last_names[unixname])+'.txt', +str(rev_unixname)+'.txt')
+                print("moving", str(self.last_names[unixname])+'.txt', str(rev_unixname)+'.txt')
 
             self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
-            self.index.move([str(self.last_names[unixname])+'.txt', +str(rev_unixname)+'.txt'])
+            self.index.move([str(self.last_names[unixname])+'.txt', str(rev_unixname)+'.txt'])
 
         # Ouput contents
         fname = rev_unixname+'.txt'
@@ -208,31 +208,38 @@ class RepoMaintainer:
         outp.write(source)
         outp.close()
 
+        commit_msg = ""
+
         # Add new page
         if not unixname in self.last_names: # never before seen
+            commit_msg += "Created "
             if self.debug:
                 print("adding", fname)
+        elif rev['comment'] == '':
+            commit_msg += "Updated "
 
-            self.index.add([str(fname)])
-
-        self.last_names[unixname] = rev_unixname
+        commit_msg += rev_unixname
 
         # Commit
         if rev['comment'] != '':
-            commit_msg = rev_unixname + ': ' + rev['comment']
+            commit_msg += ': ' + rev['comment']
         else:
-            commit_msg = 'Updated ' + rev_unixname + ' (no message)'
+            commit_msg += ' (no message)'
         if rev['date']:
             parsed_time = time.gmtime(int(rev['date'])) # TODO: assumes GMT
             commit_date = time.strftime('%Y-%m-%d %H:%M:%S', parsed_time)
         else:
             commit_date = None
+
         print(("Commiting: "+str(self.rev_no)+'. '+commit_msg))
 
         username = str(rev['user'])
         email = re.sub(pattern = r'[^a-zA-Z0-9\-.+]', repl='', string=username).lower() + '@' + self.wd.sitename
 
         author = Actor(username, email)
+
+        self.index.add([str(fname)])
+        self.last_names[unixname] = rev_unixname
         commit = self.index.commit(commit_msg, author=author, commit_date=commit_date)
         self.rev_no += 1
 
