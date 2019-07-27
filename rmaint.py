@@ -55,6 +55,11 @@ class RepoMaintainer:
         self.wrevs = pickle.load(fp)
         fp.close()
 
+    def savePages(self, pages):
+        fp = open(self.path+'/.pages', 'wb')
+        pickle.dump(pages, fp)
+        fp.close()
+
     #
     # Compiles a combined revision list for a given set of pages, or all pages on the site.
     #  pages: compile history for these pages
@@ -68,32 +73,72 @@ class RepoMaintainer:
             print("Loading cached revision list...")
             self.loadWRevs()
         else:
-            print("Building revision list...")
+            self.wrevs = []
+            print('no wrevs')
+
+        print("Building revision list...")
+        if not pages:
+            if os.path.isfile(self.path+'/.pages'):
+                print('loading fetched pages')
+                fp = open(self.path+'/.pages', 'rb')
+                pages = pickle.load(fp)
+                fp.close()
+
+            print('need to fetch pages')
             if not pages:
                 pages = self.wd.list_pages(10000)
-            self.wrevs = []
-            for page in pages:
-                print(("Querying page: "+page))
-                page_id = self.wd.get_page_id(page)
-                print(("ID: "+str(page_id)))
-                revs = self.wd.get_revisions(page_id, depth)
-                print(("Revisions: "+str(len(revs))))
-                for rev in revs:
-                    self.wrevs.append({
-                      'page_id' : page_id,
-                      'page_name' : page, # name atm, not at revision time
-                      'rev_id' : rev['id'],
-                      'date' : rev['date'],
-                      'user' : rev['user'],
-                      'comment' : rev['comment'],
-                    })
+                self.savePages(pages)
+
+
+        fetched_pages = []
+
+        for wrev in self.wrevs:
+            page_name = wrev['page_name']
+
+            if page_name in fetched_pages:
+                continue
+
+            fetched_pages.append(page_name)
+
+        print("fetched " + str(len(fetched_pages)) + " of " + str(len(pages)))
+
+        #self.wrevs = []
+        fetched = 0
+        for page in pages:
+            if page in fetched_pages:
+                print('already fetched', page)
+                continue
+
+            print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
+            fetched += 1
+            page_id = self.wd.get_page_id(page)
+            print(("ID: "+str(page_id)))
+            if page_id is None:
+                print('page lost', page)
+                continue
+
+            revs = self.wd.get_revisions(page_id, depth)
+            print(("Revisions: "+str(len(revs))))
+            for rev in revs:
+                self.wrevs.append({
+                  'page_id' : page_id,
+                  'page_name' : page, # name atm, not at revision time
+                  'rev_id' : rev['id'],
+                  'date' : rev['date'],
+                  'user' : rev['user'],
+                  'comment' : rev['comment'],
+                })
             self.saveWRevs() # Save a cached copy
-            print("")
+        self.saveWRevs() # Save a cached copy
+        os.remove(self.path+'/.pages')
+        print("")
         
         
         print(("Total revisions: "+str(len(self.wrevs))))
         
         print("Sorting revisions...")
+        print(self.wrevs[0])
+        print(self.wrevs[0]['date'])
         self.wrevs.sort(key=lambda rev: rev['date'])
         print("")
         
