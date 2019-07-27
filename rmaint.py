@@ -106,7 +106,11 @@ class RepoMaintainer:
         fetched = 0
         for page in pages:
             if page in fetched_pages:
-                print('already fetched', page)
+                #print('already fetched', page)
+                continue
+
+            if page == "sandbox":
+                print("Skipping", page)
                 continue
 
             print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
