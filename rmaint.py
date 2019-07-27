@@ -134,7 +134,10 @@ class RepoMaintainer:
                 })
             self.saveWRevs() # Save a cached copy
         self.saveWRevs() # Save a cached copy
-        os.remove(self.path+'/.pages')
+
+        if os.path.isfile(self.path+'/.pages'):
+            os.remove(self.path+'/.pages')
+
         print("")
         
         
@@ -239,16 +242,24 @@ class RepoMaintainer:
         # There are also problems when parent page gets renamed -- see updateChildren
 
         # If the page is tracked and its name just changed, tell Git
+        fname = str(rev_unixname) + '.txt'
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
+
         if rename:
+            name_rename_from = str(self.last_names[unixname])+'.txt'
+
             if self.debug:
-                print("moving", str(self.last_names[unixname])+'.txt', str(rev_unixname)+'.txt')
+                print("moving", name_rename_from, "to", fname)
 
             self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
-            self.index.move([str(self.last_names[unixname])+'.txt', str(rev_unixname)+'.txt'])
+
+            # Try to do the best we can, these situations usually stem from vandalism people have cleaned up
+            if os.path.isfile(self.path + '/' + name_rename_from):
+                self.index.move([name_rename_from, fname], force=True)
+            else:
+                print("source file does not exist, probably deleted or renamed from already", name_rename_from)
 
         # Ouput contents
-        fname = rev_unixname+'.txt'
         outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
         if details['title']:
             outp.write('title:'+details['title']+'\n')
