@@ -173,6 +173,7 @@ class Wikidot:
 
             # Username in a last <a> under <span class="printuser">
             user_span = tr.find("span", attrs={"class": "printuser"})
+            last_a = None
             for last_a in user_span.find_all('a'): pass
             rev_user = last_a.getText() if last_a else None
 
