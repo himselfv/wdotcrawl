@@ -39,15 +39,14 @@ class Wikidot:
         url = self.site+'/ajax-module-connector.php'
         if urlAppend is not None:
             url += urlAppend
-        print('url', url)
+
         req = requests.request('POST', url, data=params, cookies=cookies)
         json = req.json()
 
-        print(json)
         if json['status'] == 'ok':
             return json['body'], (json['title'] if 'title' in json else '')
         else:
-            raise req.text
+            raise Exception(req.text)
 
     # Same but only returns the body, most responses don't have titles
     def query(self, params, urlAppend = None):
