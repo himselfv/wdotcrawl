@@ -165,10 +165,13 @@ class RepoMaintainer:
         print("")
         
         if self.debug:
-            print("Revision list: ")
-            for rev in self.wrevs:
-                print((str(rev)+"\n"))
-            print("")
+            if len(self.wrevs) < 100:
+                print("Revision list: ")
+                for rev in self.wrevs:
+                    print((str(rev)+"\n"))
+                print("")
+            else:
+                print("Too many revisions, not printing everything")
 
 
     #
