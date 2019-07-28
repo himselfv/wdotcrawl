@@ -269,12 +269,6 @@ class RepoMaintainer:
 
         # If the page is tracked and its name just changed, tell Git
         fname = str(rev_unixname) + '.txt'
-
-        # We track renames as symlinks to try to emulate how it handles redirects from old to new names
-        # But if it is overwritten, don't write into the symlinked file, create a new one
-        if os.path.islink(self.path + '/' + fname):
-            os.remove(self.path + '/' + fname)
-
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
 
         if rename:
@@ -288,10 +282,6 @@ class RepoMaintainer:
             # Try to do the best we can, these situations usually stem from vandalism people have cleaned up
             if os.path.isfile(self.path + '/' + name_rename_from):
                 self.index.move([name_rename_from, fname], force=True)
-
-                # Because the wiki redirects
-                os.symlink(fname, self.path + '/' + name_rename_from)
-                self.index.add([name_rename_from])
             else:
                 print("source file does not exist, probably deleted or renamed from already", name_rename_from)
 
