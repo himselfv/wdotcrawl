@@ -87,7 +87,7 @@ class RepoMaintainer:
             print('no wrevs')
 
         if os.path.isfile(self.path+'/.fetched'):
-            loadFetched()
+            self.loadFetched()
         else:
             self.fetched_revids = []
 
@@ -140,6 +140,7 @@ class RepoMaintainer:
             print(("Revisions: "+str(len(revs))))
             for rev in revs:
                 if rev['id'] in self.fetched_revids:
+                    print(rev['id'], 'already fetched')
                     continue
 
                 self.wrevs.append({
@@ -229,6 +230,14 @@ class RepoMaintainer:
             return False
 
         rev = self.wrevs[self.rev_no]
+
+        if rev['rev_id'] in self.fetched_revids:
+            print(rev['rev_id'], 'already fetched')
+            self.rev_no += 1
+
+            self.saveState() # Update operation state
+            return True
+
         source = self.wd.get_revision_source(rev['rev_id'])
         # Page title and unix_name changes are only available through another request:
         details = self.wd.get_revision_version(rev['rev_id'])
