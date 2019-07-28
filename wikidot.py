@@ -41,7 +41,12 @@ class Wikidot:
             url += urlAppend
 
         req = requests.request('POST', url, data=params, cookies=cookies)
-        json = req.json()
+        try:
+            json = req.json()
+        except JSONDecodeError as e:
+            print(e, req, url, params)
+            raise e
+        #print(json)
 
         if json['status'] == 'ok':
             return json['body'], (json['title'] if 'title' in json else '')
