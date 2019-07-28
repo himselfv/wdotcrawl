@@ -44,9 +44,8 @@ class Wikidot:
         try:
             json = req.json()
         except JSONDecodeError as e:
-            print(e, req, url, params)
+            print('Failed to parse response from wikidot', e, req, url, params)
             raise e
-        #print(json)
 
         if json['status'] == 'ok':
             return json['body'], (json['title'] if 'title' in json else '')
@@ -87,18 +86,22 @@ class Wikidot:
 
             for entry in soup.div.p.text.split('\n'):
                 pages.append(entry)
+
             if self.debug:
                 print('Pages found:', len(pages))
 
             targets = soup.find_all('span','target')
             if len(targets) < 2:
-                print("unable to find next target")
+                print("Unable to find next listing page, not enough target spans")
                 break
 
             next_url = targets[-1].a.get('href').split('/')
             if len(next_url) > 0 and next_url[-1].isnumeric():
                 next_page = int(next_url[-1])
-                print('next page', next_page)
+
+                if self.debug:
+                    print('Next listing page', next_page)
+
             else:
                 print("invalid next url", next_url)
                 break
@@ -108,16 +111,23 @@ class Wikidot:
             current_spans = soup.find_all('span','current')
             if len(current_spans) > 0:
                 current_page = int(current_spans[0].text)
-                print('current page', current_page)
+
+                if self.debug:
+                    print('Current listing page', current_page)
+
             else:
                 print("unable to find current page")
                 break;
 
             if next_page != offset + 1:
-                print('next page is wrong', next_page)
+                if self.debug:
+                    print('Next page is wrong', next_page, 'hopefully at the end')
                 break
 
             offset += 1
+
+            print("Fetching listing page", offset)
+
         return pages
 
 

@@ -84,22 +84,27 @@ class RepoMaintainer:
             self.loadWRevs()
         else:
             self.wrevs = []
-            print('no wrevs')
+            if self.debug:
+                print('No existing wrevs')
 
         if os.path.isfile(self.path+'/.fetched'):
             self.loadFetched()
         else:
             self.fetched_revids = []
 
-        print("Building revision list...")
+        if self.debug:
+            print("Building revision list...")
+
         if not pages:
             if os.path.isfile(self.path+'/.pages'):
-                print('loading fetched pages')
+                print('Loading fetched pages')
                 fp = open(self.path+'/.pages', 'rb')
                 pages = pickle.load(fp)
                 fp.close()
 
-            print('need to fetch pages')
+            if self.debug:
+                print('Need to fetch pages')
+
             if not pages:
                 pages = self.wd.list_pages(10000)
                 self.savePages(pages)
@@ -115,29 +120,35 @@ class RepoMaintainer:
 
             fetched_pages.append(page_name)
 
-        print("fetched " + str(len(fetched_pages)) + " of " + str(len(pages)))
+        if self.debug:
+            print("Already fetched " + str(len(fetched_pages)) + " of " + str(len(pages)))
 
-        #self.wrevs = []
         fetched = 0
         for page in pages:
             if page in fetched_pages:
                 #print('already fetched', page)
                 continue
 
+            # TODO: more generic blacklisting
             if page == "sandbox":
-                print("Skipping", page)
+                if self.debug:
+                    print("Skipping", page)
                 continue
 
-            print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
+            if self.debug:
+                print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
             fetched += 1
             page_id = self.wd.get_page_id(page)
-            print(("ID: "+str(page_id)))
+
+            if self.debug:
+                print(("ID: "+str(page_id)))
+
             if page_id is None:
-                print('page lost', page)
+                print('Page gone?', page)
                 continue
 
             revs = self.wd.get_revisions(page_id, depth)
-            print(("Revisions: "+str(len(revs))))
+            print("Revisions to fetch: "+str(len(revs)))
             for rev in revs:
                 if rev['id'] in self.fetched_revids:
                     print(rev['id'], 'already fetched')
@@ -154,18 +165,17 @@ class RepoMaintainer:
             self.saveWRevs() # Save a cached copy
 
         print("")
-        
-        
+
         print(("Total revisions: "+str(len(self.wrevs))))
-        
-        print("Sorting revisions...")
-        print(self.wrevs[0])
-        print(self.wrevs[0]['date'])
+
+        if self.debug:
+            print("Sorting revisions...")
+
         self.wrevs.sort(key=lambda rev: rev['date'])
-        print("")
         
         if self.debug:
             if len(self.wrevs) < 100:
+                print("")
                 print("Revision list: ")
                 for rev in self.wrevs:
                     print((str(rev)+"\n"))
@@ -235,7 +245,9 @@ class RepoMaintainer:
         rev = self.wrevs[self.rev_no]
 
         if rev['rev_id'] in self.fetched_revids:
-            print(rev['rev_id'], 'already fetched')
+            if self.debug:
+                print(rev['rev_id'], 'already fetched')
+
             self.rev_no += 1
 
             self.saveState() # Update operation state
@@ -275,7 +287,7 @@ class RepoMaintainer:
             name_rename_from = str(self.last_names[unixname])+'.txt'
 
             if self.debug:
-                print("moving", name_rename_from, "to", fname)
+                print("Moving renamed", name_rename_from, "to", fname)
 
             self.updateChildren(self.last_names[unixname], rev_unixname) # Update children which reference us -- see comments there
 
@@ -283,7 +295,7 @@ class RepoMaintainer:
             if os.path.isfile(self.path + '/' + name_rename_from):
                 self.index.move([name_rename_from, fname], force=True)
             else:
-                print("source file does not exist, probably deleted or renamed from already", name_rename_from)
+                print("Source file does not exist, probably deleted or renamed from already?", name_rename_from)
 
         # Ouput contents
         outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
@@ -300,7 +312,7 @@ class RepoMaintainer:
         if not unixname in self.last_names: # never before seen
             commit_msg += "Created "
             if self.debug:
-                print("adding", fname)
+                print("Adding", fname)
         elif rev['comment'] == '':
             commit_msg += "Updated "
 
@@ -317,7 +329,7 @@ class RepoMaintainer:
         else:
             commit_date = None
 
-        print(("Commiting: "+str(self.rev_no)+'. '+commit_msg))
+        print("Committing: " + str(self.rev_no) + '. '+commit_msg)
 
         username = str(rev['user'])
         email = re.sub(pattern = r'[^a-zA-Z0-9\-.+]', repl='', string=username).lower() + '@' + self.wd.sitename
@@ -330,7 +342,7 @@ class RepoMaintainer:
         self.rev_no += 1
 
         if self.debug:
-            print('committed', commit.name_rev, 'by', author)
+            print('Committed', commit.name_rev, 'by', author)
 
         self.fetched_revids.append(rev['rev_id'])
         self.saveFetched()
