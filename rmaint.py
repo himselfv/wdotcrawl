@@ -33,6 +33,7 @@ class RepoMaintainer:
 
         # Internal state
         self.wrevs = None           # Compiled wikidot revision list (history)
+        self.fetcheds_revids = []   # Compiled wikidot revision list (history)
 
         self.rev_no = 0             # Next revision to process
         self.last_names = {}        # Tracks page renames: name atm -> last name in repo
@@ -60,6 +61,15 @@ class RepoMaintainer:
         pickle.dump(pages, fp)
         fp.close()
 
+    def saveFetched(self):
+        fp = open(self.path+'/.fetched', 'wb')
+        pickle.dump(self.fetched_revids, fp)
+        fp.close()
+
+    def loadFetched(self):
+        fp = open(self.path+'/.fetched', 'rb')
+        self.fetched_revids = pickle.load(fp)
+        fp.close()
     #
     # Compiles a combined revision list for a given set of pages, or all pages on the site.
     #  pages: compile history for these pages
@@ -75,6 +85,11 @@ class RepoMaintainer:
         else:
             self.wrevs = []
             print('no wrevs')
+
+        if os.path.isfile(self.path+'/.fetched'):
+            loadFetched()
+        else:
+            self.fetched_revids = []
 
         print("Building revision list...")
         if not pages:
@@ -124,6 +139,9 @@ class RepoMaintainer:
             revs = self.wd.get_revisions(page_id, depth)
             print(("Revisions: "+str(len(revs))))
             for rev in revs:
+                if rev['id'] in self.fetched_revids:
+                    continue
+
                 self.wrevs.append({
                   'page_id' : page_id,
                   'page_name' : page, # name atm, not at revision time
@@ -133,10 +151,6 @@ class RepoMaintainer:
                   'comment' : rev['comment'],
                 })
             self.saveWRevs() # Save a cached copy
-        self.saveWRevs() # Save a cached copy
-
-        if os.path.isfile(self.path+'/.pages'):
-            os.remove(self.path+'/.pages')
 
         print("")
         
@@ -306,7 +320,11 @@ class RepoMaintainer:
         if self.debug:
             print('committed', commit.name_rev, 'by', author)
 
+        self.fetched_revids.append(rev['rev_id'])
+        self.saveFetched()
+
         self.saveState() # Update operation state
+
         return True
 
 
@@ -347,3 +365,7 @@ class RepoMaintainer:
     def cleanup(self):
         os.remove(self.path+'/.wstate')
         os.remove(self.path+'/.wrevs')
+
+        if os.path.isfile(self.path+'/.pages'):
+            os.remove(self.path+'/.pages')
+
