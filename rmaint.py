@@ -344,7 +344,7 @@ class RepoMaintainer:
 
         self.index.add([str(fname)])
         self.last_names[unixname] = rev_unixname
-        commit = self.index.commit(commit_msg, author=author, commit_date=commit_date, author_date=commit_date)
+        commit = self.index.commit(commit_msg, author=author, author_date=commit_date)
         self.rev_no += 1
 
         if self.debug:
