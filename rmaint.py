@@ -102,16 +102,23 @@ class RepoMaintainer:
                 pages = pickle.load(fp)
                 fp.close()
 
-            if self.debug:
-                print('Need to fetch pages')
 
             if not pages:
+                if self.debug:
+                    print('Need to fetch pages')
                 pages = self.wd.list_pages(10000)
                 self.savePages(pages)
+            elif self.debug:
+                print(len(pages), 'pages loaded')
 
 
         fetched_pages = []
 
+        if self.debug:
+            print('Collecting already pages we already got revisions for')
+
+        # TODO: I don't know python, but this is highly suboptimal (and takes a ton of time)
+        # Should use a set/hashmap/whatever python calls it
         for wrev in self.wrevs:
             page_name = wrev['page_name']
 
@@ -121,12 +128,11 @@ class RepoMaintainer:
             fetched_pages.append(page_name)
 
         if self.debug:
-            print("Already fetched " + str(len(fetched_pages)) + " of " + str(len(pages)))
+            print("Already fetched revisions for " + str(len(fetched_pages)) + " of " + str(len(pages)))
 
         fetched = 0
         for page in pages:
             if page in fetched_pages:
-                #print('already fetched', page)
                 continue
 
             # TODO: more generic blacklisting
