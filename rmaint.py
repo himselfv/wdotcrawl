@@ -204,9 +204,11 @@ class RepoMaintainer:
         fp = open(self.path+'/.wstate', 'rb')
         self.rev_no = pickle.load(fp)
         self.last_names = pickle.load(fp)
+
         try:
             self.last_parents = pickle.load(fp)
-        except EOFError:
+        except EOFError as e:
+            print('EOFError while loading wstate', e)
             pass
         fp.close()
 
@@ -289,6 +291,8 @@ class RepoMaintainer:
         fname = str(rev_unixname) + '.txt'
         rename = (unixname in self.last_names) and (self.last_names[unixname] != rev_unixname)
 
+        commit_msg = ""
+
         if rename:
             name_rename_from = str(self.last_names[unixname])+'.txt'
 
@@ -300,8 +304,17 @@ class RepoMaintainer:
             # Try to do the best we can, these situations usually stem from vandalism people have cleaned up
             if os.path.isfile(self.path + '/' + name_rename_from):
                 self.index.move([name_rename_from, fname], force=True)
+                commit_msg += "Renamed from " str(self.last_names[unixname]) + ' to ' + str(rev_unixname) + ' '
             else:
                 print("Source file does not exist, probably deleted or renamed from already?", name_rename_from)
+
+        # Add new page
+        elif not os.path.isfile(self.path + '/' + fname): # never before seen
+            commit_msg += "Created "
+            if self.debug:
+                print("Adding", fname)
+        elif rev['comment'] == '':
+            commit_msg += "Updated "
 
         # Ouput contents
         outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
@@ -311,16 +324,6 @@ class RepoMaintainer:
             outp.write('parent:'+parent_unixname+'\n')
         outp.write(source)
         outp.close()
-
-        commit_msg = ""
-
-        # Add new page
-        if not unixname in self.last_names: # never before seen
-            commit_msg += "Created "
-            if self.debug:
-                print("Adding", fname)
-        elif rev['comment'] == '':
-            commit_msg += "Updated "
 
         commit_msg += rev_unixname
 
