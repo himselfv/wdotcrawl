@@ -105,5 +105,5 @@ elif args.dump:
     while rm.commitNext():
         pass
 
-    rm.cleanup()
+    # rm.cleanup()
     print("Done.")
