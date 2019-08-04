@@ -4,6 +4,7 @@ import wikidot
 import os
 import codecs
 import pickle as pickle
+import json
 
 # git stuff
 from git import Repo, Actor
@@ -61,15 +62,31 @@ class RepoMaintainer:
         pickle.dump(pages, fp)
         fp.close()
 
-    def saveFetched(self):
-        fp = open(self.path+'/.fetched', 'wb')
-        pickle.dump(self.fetched_revids, fp)
+    def appendFetchedRevid(self, revid):
+        fp = open(self.path+'/.fetched.txt', 'a')
+        fp.write(revid + '\n')
         fp.close()
 
-    def loadFetched(self):
-        fp = open(self.path+'/.fetched', 'rb')
-        self.fetched_revids = pickle.load(fp)
+    def loadFetchedRevids(self):
+        self.fetched_revids = [line.rstrip() for line in open(self.path+'/.fetched.txt', 'r')]
+
+    # Persistent metadata about the repo:
+    #  - Tracks page renames: name atm -> last name in repo
+    #  - Tracks page parent names: name atm -> last parent in repo
+    def saveMetadata(self):
+        metadata = {'names': self.last_names, 'parents': self.last_parents }
+        fp = open(self.path+'/.metadata.json', 'w')
+        json.dump(metadata, fp)
         fp.close()
+
+    def loadMetadata(self):
+        fp = open(self.path+'/.metadata.json', 'r')
+        metadata = json.load(fp)
+        self.last_names = metadata['names']
+        self.last_parents = metadata['parents']
+        fp.close()
+
+        self.loadFetchedRevids()
     #
     # Compiles a combined revision list for a given set of pages, or all pages on the site.
     #  pages: compile history for these pages
@@ -87,8 +104,9 @@ class RepoMaintainer:
             if self.debug:
                 print('No existing wrevs')
 
-        if os.path.isfile(self.path+'/.fetched'):
-            self.loadFetched()
+        if os.path.isfile(self.path+'/.fetched.txt'):
+            self.loadFetchedRevids()
+            print(self.fetched_revids)
         else:
             self.fetched_revids = []
 
@@ -110,7 +128,6 @@ class RepoMaintainer:
                 self.savePages(pages)
             elif self.debug:
                 print(len(pages), 'pages loaded')
-
 
         fetched_pages = []
 
@@ -170,6 +187,9 @@ class RepoMaintainer:
                 })
             self.saveWRevs() # Save a cached copy
 
+        if os.path.isfile(self.path+'/.metadata.json'):
+            self.loadMetadata()
+
         print("")
 
         print(("Total revisions: "+str(len(self.wrevs))))
@@ -196,20 +216,11 @@ class RepoMaintainer:
     def saveState(self):
         fp = open(self.path+'/.wstate', 'wb')
         pickle.dump(self.rev_no, fp)
-        pickle.dump(self.last_names, fp)
-        pickle.dump(self.last_parents, fp)
         fp.close()
     
     def loadState(self):
         fp = open(self.path+'/.wstate', 'rb')
         self.rev_no = pickle.load(fp)
-        self.last_names = pickle.load(fp)
-
-        try:
-            self.last_parents = pickle.load(fp)
-        except EOFError as e:
-            print('EOFError while loading wstate', e)
-            pass
         fp.close()
 
 
@@ -304,7 +315,7 @@ class RepoMaintainer:
             # Try to do the best we can, these situations usually stem from vandalism people have cleaned up
             if os.path.isfile(self.path + '/' + name_rename_from):
                 self.index.move([name_rename_from, fname], force=True)
-                commit_msg += "Renamed from " str(self.last_names[unixname]) + ' to ' + str(rev_unixname) + ' '
+                commit_msg += "Renamed from " + str(self.last_names[unixname]) + ' to ' + str(rev_unixname) + ' '
             else:
                 print("Source file does not exist, probably deleted or renamed from already?", name_rename_from)
 
@@ -315,6 +326,8 @@ class RepoMaintainer:
                 print("Adding", fname)
         elif rev['comment'] == '':
             commit_msg += "Updated "
+
+        self.last_names[unixname] = rev_unixname
 
         # Ouput contents
         outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
@@ -340,22 +353,23 @@ class RepoMaintainer:
 
         print("Committing: " + str(self.rev_no) + '. '+commit_msg)
 
+        # Include metadata in the commit (if changed)
+        self.appendFetchedRevid(rev['rev_id'])
+        self.saveMetadata()
+        self.index.add([str(fname), '.metadata.json'])
+
         username = str(rev['user'])
         email = re.sub(pattern = r'[^a-zA-Z0-9\-.+]', repl='', string=username).lower() + '@' + self.wd.sitename
-
         author = Actor(username, email)
 
-        self.index.add([str(fname)])
-        self.last_names[unixname] = rev_unixname
         commit = self.index.commit(commit_msg, author=author, author_date=commit_date)
-        self.rev_no += 1
 
         if self.debug:
             print('Committed', commit.name_rev, 'by', author)
 
         self.fetched_revids.append(rev['rev_id'])
-        self.saveFetched()
 
+        self.rev_no += 1
         self.saveState() # Update operation state
 
         return True
@@ -398,10 +412,17 @@ class RepoMaintainer:
     def cleanup(self):
         if os.path.exists(self.path+'/.wstate'):
             os.remove(self.path+'/.wstate')
+        else:
+            print("wstate does not exist?")
 
         if os.path.exists(self.path+'/.wrevs'):
             os.remove(self.path+'/.wrevs')
+        else:
+            print("wrevs does not exist?")
 
         if os.path.exists(self.path+'/.pages'):
             os.remove(self.path+'/.pages')
 
+        if self.rev_no > 0:
+            self.index.add(['.fetched.txt'])
+            self.index.commit('Updating fetched revisions')
