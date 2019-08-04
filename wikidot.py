@@ -14,6 +14,7 @@ class Wikidot:
         self.delay = 200        # Delay between requests in msec
         self.debug = False      # Print debug messages
         self.next_timeslot = time.clock()   # Can call immediately
+        self.max_retries = 5
 
 
     # To honor usage rules, we wait for self.delay between requests.
@@ -35,22 +36,47 @@ class Wikidot:
             print(params)
             print(cookies)
 
-        self._wait_request_slot()
         url = self.site+'/ajax-module-connector.php'
         if urlAppend is not None:
             url += urlAppend
 
-        req = requests.request('POST', url, data=params, cookies=cookies)
-        try:
-            json = req.json()
-        except JSONDecodeError as e:
-            print('Failed to parse response from wikidot', e, req, url, params)
-            raise e
+        # In case of e. g. 500 errors
+        retries = 0
+        while retries < self.max_retries:
+            self._wait_request_slot()
 
-        if json['status'] == 'ok':
-            return json['body'], (json['title'] if 'title' in json else '')
-        else:
-            raise Exception(req.text)
+            req = requests.request('POST', url, data=params, cookies=cookies)
+
+            # Usually a 502 error, recovers immediately
+            if req.status_code >= 500:
+                retries += 1
+                print('500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
+
+                # In case of debug enabled, we already printed this above
+                if not self.debug:
+                    print(req, params)
+
+                # Be nice, double wait delay for errors
+                self._wait_request_slot()
+
+                continue
+
+            try:
+                # In case of 404 errors or other stuff that indicates
+                # some bug in how we handle or request things
+                req.raise_for_status()
+                json = req.json()
+            except Exception as e:
+                print('Failed to get response from wikidot', e, req, url, params)
+                raise e
+
+            if json['status'] == 'ok':
+                return json['body'], (json['title'] if 'title' in json else '')
+            else:
+                raise Exception(req.text)
+
+        print('Failed too many times', url, params, cookies)
+        raise Exception('Failed too many times for ' + url)
 
     # Same but only returns the body, most responses don't have titles
     def query(self, params, urlAppend = None):
