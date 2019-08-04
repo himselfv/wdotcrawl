@@ -393,9 +393,12 @@ class RepoMaintainer:
     # Finalizes the construction process and deletes any temporary files.
     #
     def cleanup(self):
-        os.remove(self.path+'/.wstate')
-        os.remove(self.path+'/.wrevs')
+        if os.path.exists(self.path+'/.wstate'):
+            os.remove(self.path+'/.wstate')
 
-        if os.path.isfile(self.path+'/.pages'):
+        if os.path.exists(self.path+'/.wrevs'):
+            os.remove(self.path+'/.wrevs')
+
+        if os.path.exists(self.path+'/.pages'):
             os.remove(self.path+'/.pages')
 
