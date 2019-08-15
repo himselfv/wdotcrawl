@@ -1,4 +1,4 @@
-from mercurial import scmutil, osutil
+from mercurial import scmutil
 from types import MethodType
 from mercurial import encoding
 import codecs
@@ -34,8 +34,11 @@ encoding.fromlocal = better_fromlocal
 
 old_vfs_call = None
 
-def better_vfs_call(self, path, mode="r", text=False, atomictemp=False, notindexed=False, backgroundclose=False):
-	fp = old_vfs_call(self, path, mode, text, atomictemp, notindexed, backgroundclose)
+def better_vfs_call(self, path, mode="r", atomictemp=False, notindexed=False,
+                 backgroundclose=False, checkambig=False, auditpath=True,
+                 makeparentdirs=True):
+	fp = old_vfs_call(self, path, mode, text, atomictemp, notindexed, backgroundclose,
+		checkambig, auditpath, makeparentdirs)
 	if path.endswith('last-message.txt'):
 		# Create a wrapper like codecs.open does:
 		info = codecs.lookup("utf-8")
@@ -43,8 +46,5 @@ def better_vfs_call(self, path, mode="r", text=False, atomictemp=False, notindex
 		fp.encoding = 'utf-8'
 	return fp
 
-old_vfs_call = scmutil.vfs.__call__
-scmutil.vfs.__call__ = better_vfs_call
-
-
-
+old_vfs_call = scmutil.vfs.vfs.__call__
+scmutil.vfs.vfs.__call__ = better_vfs_call
