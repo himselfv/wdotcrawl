@@ -37,7 +37,7 @@ old_vfs_call = None
 def better_vfs_call(self, path, mode="r", atomictemp=False, notindexed=False,
                  backgroundclose=False, checkambig=False, auditpath=True,
                  makeparentdirs=True):
-	fp = old_vfs_call(self, path, mode, text, atomictemp, notindexed, backgroundclose,
+	fp = old_vfs_call(self, path, mode, atomictemp, notindexed, backgroundclose,
 		checkambig, auditpath, makeparentdirs)
 	if path.endswith('last-message.txt'):
 		# Create a wrapper like codecs.open does:
