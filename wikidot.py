@@ -10,6 +10,10 @@ from urllib.parse import urlparse
 class Wikidot:
     def __init__(self, site):
         self.site = site        # Wikidot site to query
+
+        # strip out trailing /, if it exists
+        if self.site[-1] == '/':
+            self.site = self.site[:-1]
         self.sitename = urlparse(site).hostname.lower()
         self.delay = 200        # Delay between requests in msec
         self.debug = False      # Print debug messages
