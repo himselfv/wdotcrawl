@@ -290,7 +290,6 @@ class Wikidot:
             attached_file = False
             if attachment_action is not None:
                 attached_file = True
-                #pprint(raw)
                 print("was attchment", rev_id)
 
             # Unixtime is stored as a CSS class time_*
@@ -339,7 +338,6 @@ class Wikidot:
         # - random real linebreaks (have to be ignored)
         if self.debug:
             print("revision source:")
-            #pprint(res)
         soup = BeautifulSoup(res, 'html.parser')
         return soup.div.getText().lstrip(' \r\n')
 
@@ -362,6 +360,13 @@ class Wikidot:
 
 
         # Extract list of images
+
+        # TODO: to get the right revision that added them, we need to go back
+        # and amend the commits that are flagged as attached_file above,
+        # because we can't get the image file name or URL reliably until they
+        # are added to the page source, wikidot itself doesn't store this information.
+        # So much hassle for little value, we get the empty commits when images
+        # are added anyways.
         images = []
         for img_div in soup.find_all("div", attrs={"class": "scp-image-block"}):
             img_src = None
