@@ -166,7 +166,11 @@ class Wikidot:
         req = requests.request('GET', self.site+'/'+page_unix_name + '/noredirect/true')
         soup = BeautifulSoup(req.text, 'html.parser')
         for item in soup.head.find_all('script'):
-            text = item.text
+            text = item.string
+            if text is None:
+                print("No text in script item", item)
+                continue
+
             pos = text.find("WIKIREQUEST.info.pageId = ")
             if pos >= 0:
                 pos += len("WIKIREQUEST.info.pageId = ")
