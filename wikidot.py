@@ -13,14 +13,14 @@ class Wikidot:
         self.sitename = urlparse(site).hostname.lower()
         self.delay = 200        # Delay between requests in msec
         self.debug = False      # Print debug messages
-        self.next_timeslot = time.clock()   # Can call immediately
+        self.next_timeslot = time.process_time()   # Can call immediately
         self.max_retries = 5
 
 
     # To honor usage rules, we wait for self.delay between requests.
     # Low-level query functions call this before every request to Wikidot./
     def _wait_request_slot(self):
-        tm = time.clock()
+        tm = time.process_time()
         if self.next_timeslot - tm > 0:
             time.sleep(self.next_timeslot - tm)
         self.next_timeslot = tm + self.delay / 1000
