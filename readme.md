@@ -1,10 +1,21 @@
-This is a Python command line client for relatively popular wiki hosting http://www.wikidot.com which lets you:
+*This is a fork to make a permanent backup of the SCP wiki.*
+
+This is a Python command line client for relatively popular wiki hosting
+http://www.wikidot.com which lets you:
 
 * List all pages on a site
 * See all revisions of a page
 * Query page source
 
 Most interestingly, it allows you to download the whole site as a Git repository, with proper commit dates, author and comments!
+
+##### Dependencies
+
+At least:
+
+* Python 3
+* python-beautifulsoup4
+* python-gitpython
 
 ##### Examples:
 
