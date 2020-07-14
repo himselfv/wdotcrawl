@@ -167,7 +167,12 @@ class Wikidot:
     def get_page_id(self, page_unix_name):
         # The only freaking way to get page ID is to load the page! Wikidot!
         self._wait_request_slot()
-        req = requests.request('GET', self.site+'/'+page_unix_name + '/noredirect/true')
+        url = self.site+'/'+page_unix_name + '/noredirect/true';
+
+        if self.debug:
+            print("fetching", url)
+
+        req = requests.request('GET', url)
         soup = BeautifulSoup(req.text, 'html.parser')
         for item in soup.head.find_all('script'):
             text = item.string
