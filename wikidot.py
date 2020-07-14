@@ -2,7 +2,12 @@ import requests
 import random
 from bs4 import BeautifulSoup
 import time
-from urllib.parse import urlparse
+from urllib.parse import urlparse, urljoin
+from pprint import pprint
+import pathlib
+import hashlib
+import os
+import shutil
 
 # Implements various queries to Wikidot engine through its AJAX facilities
 
@@ -20,6 +25,65 @@ class Wikidot:
         self.next_timeslot = time.process_time()   # Can call immediately
         self.max_retries = 5
 
+    # Downloads file if it doesn't exist
+    def maybe_download_file(self, url, file_path):
+        self._wait_request_slot()
+
+        path = pathlib.Path(file_path)
+        if path.exists():
+            if self.debug:
+                print(file_path, "exists, skipping")
+            return False
+
+        dirpath = path.resolve().relative_to(pathlib.Path.cwd()).parent
+        os.makedirs(dirpath, exist_ok=True)
+
+        if self.debug:
+            print("downloading", url, "to" ,file_path, "dirpath", dirpath)
+
+        # In case of e. g. 500 errors
+        retries = 0
+        while retries < self.max_retries:
+            self._wait_request_slot()
+
+            headers = requests.utils.default_headers()
+            # Pretty generic user-agent, but we append a unique none for us
+            # Makes wikimedia happy
+            headers.update({ "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0 wdotcrawler/1.0"})
+            req = requests.get(url, stream=True, )
+
+            if req.status_code >= 500:
+                retries += 1
+                print('500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
+
+                # In case of debug enabled, we already printed this above
+                if not self.debug:
+                    print(req)
+
+                # Be nice, double wait delay for errors
+                self._wait_request_slot()
+
+                # Extra nice, sleep longer (expoential increase), hope for the
+                # server to recover
+                time.sleep(retries * retries * self.delay)
+
+                continue
+
+            try:
+                # In case of 404 errors or other stuff that indicates
+                # some bug in how we handle or request things
+                req.raise_for_status()
+
+                req.raw.decode_content = True
+                with open(file_path, 'wb') as out_file:
+                    shutil.copyfileobj(req.raw, out_file)
+
+                return True
+            except Exception as e:
+                print('Failed to download', e, req, url)
+                raise e
+
+        return False
 
     # To honor usage rules, we wait for self.delay between requests.
     # Low-level query functions call this before every request to Wikidot./
@@ -28,6 +92,7 @@ class Wikidot:
         if self.next_timeslot - tm > 0:
             time.sleep(self.next_timeslot - tm)
         self.next_timeslot = tm + self.delay / 1000
+
         pass
 
     # Makes a Wikidot AJAX query. Returns the response+title or throws an error.
@@ -89,7 +154,6 @@ class Wikidot:
     # Same but only returns the body, most responses don't have titles
     def query(self, params, urlAppend = None):
         return self.queryex(params, urlAppend)[0]
-
 
     # List all pages for the site.
 
@@ -181,7 +245,7 @@ class Wikidot:
         for item in soup.head.find_all('script'):
             text = item.string
             if text is None:
-                print("No text in script item", item)
+                #print("No text in script item", item)
                 continue
 
             pos = text.find("WIKIREQUEST.info.pageId = ")
@@ -209,17 +273,25 @@ class Wikidot:
         })
 
         soup = BeautifulSoup(res, 'html.parser')
+        print("revisions raw")
         return soup.table.contents
 
     # Client version
     def get_revisions(self, page_id, limit):
         revs = []
-        for tr in self.get_revisions_raw(page_id, limit):
+        raw = self.get_revisions_raw(page_id, limit)
+        for tr in raw:
             if tr.name != 'tr': continue # there's a header + various junk
 
             # RevID is stored as a value of an INPUT field
             rev_id = tr.input['value'] if tr.input else None
             if rev_id is None: continue # can't parse
+            attachment_action = tr.find("span", attrs={"title": "file/attachment action"})
+            attached_file = False
+            if attachment_action is not None:
+                attached_file = True
+                #pprint(raw)
+                print("was attchment", rev_id)
 
             # Unixtime is stored as a CSS class time_*
             rev_date = 0
@@ -228,6 +300,8 @@ class Wikidot:
                 for cls in date_span['class']:
                     if cls.startswith('time_'):
                         rev_date = int(cls[5:])
+            else:
+                print("no odate found")
 
             # Username in a last <a> under <span class="printuser">
             user_span = tr.find("span", attrs={"class": "printuser"})
@@ -246,6 +320,7 @@ class Wikidot:
                 'date': rev_date,
                 'user': rev_user,
                 'comment': rev_comment,
+                'attached_file': attached_file,
             })
         return revs
 
@@ -262,12 +337,18 @@ class Wikidot:
         # - htmlentities
         # - <br/>s in place of linebreaks
         # - random real linebreaks (have to be ignored)
+        if self.debug:
+            print("revision source:")
+            #pprint(res)
         soup = BeautifulSoup(res, 'html.parser')
         return soup.div.getText().lstrip(' \r\n')
 
     # Retrieves the rendered version + additional info unavailable in get_revision_source:
     # * Title
     # * Unixname at the time
+    #
+    # TODO: I think this could fetch the source as well, so we don't need to
+    # fetch two pages (the fetch source function above).
     def get_revision_version_raw(self, rev_id):
         res = self.queryex({
           'moduleName': 'history/PageVersionModule',
@@ -279,6 +360,8 @@ class Wikidot:
         res = self.get_revision_version_raw(rev_id) # this has title!
         soup = BeautifulSoup(res[0], 'html.parser')
 
+
+        # Extract list of images
         images = []
         for img_div in soup.find_all("div", attrs={"class": "scp-image-block"}):
             img_src = None
@@ -297,10 +380,31 @@ class Wikidot:
                     img_src = img["src"]
                     img_name = img["alt"]
 
-            if img_src is not None:
-                # Just in case, I don't think it ever happens
-                img_name = img_name.replace("/", "_forward_slash_")
-                images.append({"src": img_src, "filename": img_name})
+            if img_src is None:
+                continue
+
+            # Just in case, I don't think it ever happens, but resolve '..'
+            # juuuust in case someone tries to be funny
+            img_url = urlparse(urljoin(img_src, "."))
+            url_path = pathlib.Path(img_url.path)
+
+            img_path = ""
+            if img_url.netloc != "":
+                img_path = img_url.netloc + "/"
+                if img_url.netloc[-1] != '/':
+                    img_path += '/'
+
+            if img_url.path != "" and img_url.path[0] == '/':
+                img_path += img_url.path[1:]
+            else:
+                img_path += img_url.path
+
+            if img_path == "" or img_path[-1] == "/":
+                img_path += img_name
+
+            images.append({"src": img_src, "filename": img_name, "filepath": "images/" + img_path})
+
+
 
         # First table is a flyout with revision details. Remove and study it.
         unixname = None

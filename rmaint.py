@@ -304,6 +304,8 @@ class RepoMaintainer:
 
         commit_msg = ""
 
+        added_file_paths = []
+
         if rename:
             name_rename_from = str(self.last_names[unixname])+'.txt'
 
@@ -332,11 +334,13 @@ class RepoMaintainer:
         # Ouput contents
         outp = codecs.open(self.path + '/' + fname, "w", "UTF-8")
         if details['title']:
-            outp.write('title:'+details['title']+'\n')
+            outp.write('title:' + details['title']+'\n')
         if parent_unixname:
             outp.write('parent:'+parent_unixname+'\n')
         outp.write(source)
         outp.close()
+
+        added_file_paths.append(str(fname))
 
         commit_msg += rev_unixname
 
@@ -351,12 +355,22 @@ class RepoMaintainer:
         else:
             commit_date = None
 
+        got_images = False;
+        for image in details['images']:
+            if self.wd.maybe_download_file(image['src'], self.path + '/' + image['filepath']):
+                got_images = True
+                # If we do this gitpython barfs on itself
+                #added_file_paths.append(image['filepath'])
+
+        if got_images:
+            added_file_paths.append("images")
         print("Committing: " + str(self.rev_no) + '. '+commit_msg)
 
         # Include metadata in the commit (if changed)
         self.appendFetchedRevid(rev['rev_id'])
         self.saveMetadata()
-        self.index.add([str(fname), '.metadata.json'])
+        added_file_paths.append('.metadata.json')
+        self.index.add(added_file_paths)
 
         username = str(rev['user'])
         email = re.sub(pattern = r'[^a-zA-Z0-9\-.+]', repl='', string=username).lower() + '@' + self.wd.sitename
