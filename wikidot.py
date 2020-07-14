@@ -63,6 +63,10 @@ class Wikidot:
                 # Be nice, double wait delay for errors
                 self._wait_request_slot()
 
+                # Extra nice, sleep longer (expoential increase), hope for the
+                # server to recover
+                time.sleep(retries * retries * self.delay)
+
                 continue
 
             try:
