@@ -279,6 +279,29 @@ class Wikidot:
         res = self.get_revision_version_raw(rev_id) # this has title!
         soup = BeautifulSoup(res[0], 'html.parser')
 
+        images = []
+        for img_div in soup.find_all("div", attrs={"class": "scp-image-block"}):
+            img_src = None
+            img_name = ""
+            full_link = img_div.find("a")
+            if full_link is not None:
+                # Check if it has a thumbnail, otherwise we can't trust that it is the original
+                img = full_link.find("img", attrs={"class": "enlarge"})
+                if img is not None:
+                    img_src = full_link["href"]
+                    img_name = img["alt"]
+
+            if img_src is None:
+                img = img_div.find("img")
+                if img is not None:
+                    img_src = img["src"]
+                    img_name = img["alt"]
+
+            if img_src is not None:
+                # Just in case, I don't think it ever happens
+                img_name = img_name.replace("/", "_forward_slash_")
+                images.append({"src": img_src, "filename": img_name})
+
         # First table is a flyout with revision details. Remove and study it.
         unixname = None
         details = soup.find("div", attrs={"id": "page-version-info"}).extract()
@@ -293,4 +316,5 @@ class Wikidot:
           'unixname': unixname,
           'title': res[1],
           'content': str(soup), # only content remains
+          'images': images,
         }
