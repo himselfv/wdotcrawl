@@ -137,9 +137,19 @@ class Wikidot:
                 # In case of 404 errors or other stuff that indicates
                 # some bug in how we handle or request things
                 req.raise_for_status()
+            except Exception as e:
+                print('Failed to get response from wikidot', e, req, url, params)
+
+            try:
                 json = req.json()
             except Exception as e:
                 print('Failed to get response from wikidot', e, req, url, params)
+                if retries < self.max_retries:
+                    retries += 1
+                    self._wait_request_slot()
+                    time.sleep(retries * retries * self.delay)
+                    continue
+
                 raise e
 
             if json['status'] == 'ok':
