@@ -29,13 +29,12 @@ class Wikidot:
     def maybe_download_file(self, url, file_path):
         self._wait_request_slot()
 
-        path = pathlib.Path(file_path)
-        if path.exists():
+        if os.path.exists(file_path):
             if self.debug:
                 print(file_path, "exists, skipping")
             return False
 
-        dirpath = path.resolve().relative_to(pathlib.Path.cwd()).parent
+        dirpath = os.path.dirname(file_path)
         os.makedirs(dirpath, exist_ok=True)
 
         if self.debug:
