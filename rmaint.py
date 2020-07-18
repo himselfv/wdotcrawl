@@ -75,7 +75,7 @@ class RepoMaintainer:
         fp.close()
 
     def loadFetchedRevids(self):
-        self.fetched_revids = [line.rstrip() for line in open(self.path+'/.fetched.txt', 'r')]
+        self.fetched_revids = set([line.rstrip() for line in open(self.path+'/.fetched.txt', 'r')])
 
     # Persistent metadata about the repo:
     #  - Tracks page renames: name atm -> last name in repo
@@ -112,9 +112,9 @@ class RepoMaintainer:
 
         if os.path.isfile(self.path+'/.fetched.txt'):
             self.loadFetchedRevids()
-            print(self.fetched_revids)
+            print(len(self.fetched_revids), 'revisions already fetched')
         else:
-            self.fetched_revids = []
+            self.fetched_revids = set()
 
         if self.debug:
             print("Building revision list...")
@@ -135,11 +135,7 @@ class RepoMaintainer:
             elif self.debug:
                 print(len(pages), 'pages loaded')
 
-        fetched_pages = []
-
-        if self.debug:
-            print('Collecting already pages we already got revisions for')
-
+        fetched_pages = set()
         # TODO: I don't know python, but this is highly suboptimal (and takes a ton of time)
         # Should use a set/hashmap/whatever python calls it
         for wrev in tqdm(self.wrevs, desc='Collecting pages we already got revisions for'):
@@ -148,7 +144,7 @@ class RepoMaintainer:
             if page_name in fetched_pages:
                 continue
 
-            fetched_pages.append(page_name)
+            fetched_pages.add(page_name)
 
         if self.debug:
             print("Already fetched revisions for " + str(len(fetched_pages)) + " of " + str(len(pages)))
@@ -382,7 +378,7 @@ class RepoMaintainer:
         if self.debug:
             print('Committed', commit.name_rev, 'by', author)
 
-        self.fetched_revids.append(rev['rev_id'])
+        self.fetched_revids.add(rev['rev_id'])
 
         self.rev_no += 1
         self.saveState() # Update operation state
