@@ -11,6 +11,8 @@ from git import Repo, Actor
 import time # For parsing unix epoch timestamps from wikidot and convert to normal timestamps
 import re # For sanitizing usernames to fake email addresses
 
+from tqdm import tqdm # for progress bar
+
 # Repository builder and maintainer
 # Contains logic for actual loading and maintaining the repository over the course of its construction.
 
@@ -141,7 +143,7 @@ class RepoMaintainer:
 
         # TODO: I don't know python, but this is highly suboptimal (and takes a ton of time)
         # Should use a set/hashmap/whatever python calls it
-        for wrev in self.wrevs:
+        for wrev in tqdm(self.wrevs, desc='Collecting pages we already got revisions for'):
             page_name = wrev['page_name']
 
             if page_name in fetched_pages:
@@ -153,7 +155,7 @@ class RepoMaintainer:
             print("Already fetched revisions for " + str(len(fetched_pages)) + " of " + str(len(pages)))
 
         fetched = 0
-        for page in pages:
+        for page in tqdm(pages, desc='Updating list of revisions to fetch'):
             if page in fetched_pages:
                 continue
 
@@ -178,12 +180,11 @@ class RepoMaintainer:
             revs = self.wd.get_revisions(page_id=page_id, limit=max_depth)
             for rev in tqdm(revs, desc='Adding revisions from page ' + page_id):
                 if rev['id'] in self.fetched_revids:
-                    already_fetched += 1
                     continue
 
                 self.wrevs.append({
                   'page_id' : page_id,
-                  'page_name' : page, # name atm, not at revision time
+                  'page_name' : page, # current name, not at revision time (revisions can rename them)
                   'rev_id' : rev['id'],
                   'date' : rev['date'],
                   'user' : rev['user'],
@@ -191,7 +192,7 @@ class RepoMaintainer:
                 })
             self.saveWRevs() # Save a cached copy
 
-            print("Revisions already fetched", already_fetched)
+            print("Number of revisions already fetched", len(revs) - len(self.wrevs))
 
         if os.path.isfile(self.path+'/.metadata.json'):
             self.loadMetadata()
@@ -263,16 +264,11 @@ class RepoMaintainer:
     # Takes an unprocessed revision from a revision log, fetches its data and commits it.
     # Returns false if no unprocessed revisions remain.
     #
-    def commitNext(self):
+    def commitNext(self, rev):
         if self.rev_no >= len(self.wrevs):
             return False
 
-        rev = self.wrevs[self.rev_no]
-
         if rev['rev_id'] in self.fetched_revids:
-            if self.debug:
-                print(rev['rev_id'], 'already fetched, yet called on to fetch again')
-
             self.rev_no += 1
 
             self.saveState() # Update operation state
@@ -394,6 +390,13 @@ class RepoMaintainer:
 
         return True
 
+    def fetchAll(self):
+        to_fetch = []
+        for rev in tqdm(self.wrevs, desc='Creating list of revisions to fetch'):
+            if rev['rev_id'] not in self.fetched_revids:
+                to_fetch.append(rev)
+        for rev in tqdm(to_fetch, desc='Downloading'):
+            self.commitNext(rev)
 
     #
     # Updates all children of the page to reflect parent's unixname change.

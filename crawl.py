@@ -104,9 +104,8 @@ elif args.dump:
     rm.buildRevisionList([args.page] if args.page else None)
     rm.openRepo()
 
-    print("Downloading revisions...")
-    while rm.commitNext():
-        pass
+    print("Downloading revisions")
+    rm.fetchAll()
 
     rm.cleanup()
     print("Done.")
