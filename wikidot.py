@@ -27,12 +27,12 @@ class Wikidot:
 
     # Downloads file if it doesn't exist
     def maybe_download_file(self, url, file_path):
-        self._wait_request_slot()
-
         if os.path.exists(file_path):
             if self.debug:
                 print(file_path, "exists, skipping")
             return False
+
+        self._wait_request_slot()
 
         dirpath = os.path.dirname(file_path)
         os.makedirs(dirpath, exist_ok=True)
@@ -345,8 +345,6 @@ class Wikidot:
         # - htmlentities
         # - <br/>s in place of linebreaks
         # - random real linebreaks (have to be ignored)
-        if self.debug:
-            print("revision source:")
         soup = BeautifulSoup(res, 'html.parser')
         return soup.div.getText().lstrip(' \r\n')
 
