@@ -36,7 +36,6 @@ class RepoMaintainer:
 
         # Internal state
         self.wrevs = None           # Compiled wikidot revision list (history)
-        self.fetcheds_revids = []   # Compiled wikidot revision list (history)
 
         self.rev_no = 0             # Next revision to process
         self.last_names = {}        # Tracks page renames: name atm -> last name in repo
