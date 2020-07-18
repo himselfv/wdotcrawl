@@ -171,10 +171,11 @@ class RepoMaintainer:
                 continue
 
             revs = self.wd.get_revisions(page_id, depth)
-            print("Revisions to fetch: "+str(len(revs)))
+            print("Revisions to fetch: " + str(len(revs)))
+            already_fetched = 0
             for rev in revs:
                 if rev['id'] in self.fetched_revids:
-                    print(rev['id'], 'already fetched')
+                    already_fetched += 1
                     continue
 
                 self.wrevs.append({
@@ -186,6 +187,8 @@ class RepoMaintainer:
                   'comment' : rev['comment'],
                 })
             self.saveWRevs() # Save a cached copy
+
+            print("Revisions already fetched", already_fetched)
 
         if os.path.isfile(self.path+'/.metadata.json'):
             self.loadMetadata()
@@ -265,7 +268,7 @@ class RepoMaintainer:
 
         if rev['rev_id'] in self.fetched_revids:
             if self.debug:
-                print(rev['rev_id'], 'already fetched')
+                print(rev['rev_id'], 'already fetched, yet called on to fetch again')
 
             self.rev_no += 1
 
