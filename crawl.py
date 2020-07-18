@@ -15,6 +15,7 @@ parser = argparse.ArgumentParser(description='Queries Wikidot')
 parser.add_argument('site', help='URL of Wikidot site')
 # Actions
 parser.add_argument('--list-pages', action='store_true', help='List all pages on this site')
+parser.add_argument('--max-page-count', type=int, default='10000', help='Only list/fetch up to this amount of pages')
 parser.add_argument('--source', action='store_true', help='Print page source (requires --page)')
 parser.add_argument('--content', action='store_true', help='Print page content (requires --page)')
 parser.add_argument('--log', action='store_true', help='Print page revision log (requires --page)')
@@ -41,17 +42,17 @@ def force_dirs(path):
     os.makedirs(path, exist_ok=True)
 
 if args.list_pages_raw:
-    print((wd.list_pages_raw(args.depth)))
+    print((wd.list_pages_raw(limit = args.max_pages_count)))
 
 elif args.list_pages:
-    for page in wd.list_pages(args.depth):
+    for page in wd.list_pages(limit = args.max_pages_count):
         print(page)
 
 elif args.source:
     if not args.page:
         raise Exception("Please specify --page for --source.")
     
-    page_id = wd.get_page_id(args.page)
+    page_id = wd.get_page_id(page_unix_name=args.page)
     if not page_id:
         raise Exception("Page not found: "+args.page)
     
@@ -62,7 +63,7 @@ elif args.content:
     if not args.page:
         raise Exception("Please specify --page for --source.")
     
-    page_id = wd.get_page_id(args.page)
+    page_id = wd.get_page_id(page_unix_name=args.page)
     if not page_id:
         raise Exception("Page not found: "+args.page)
     
@@ -73,7 +74,7 @@ elif args.log_raw:
     if not args.page:
         raise Exception("Please specify --page for --log.")
 
-    page_id = wd.get_page_id(args.page)
+    page_id = wd.get_page_id(page_unix_name=args.page)
     if not page_id:
         raise Exception("Page not found: "+args.page)
 
@@ -84,7 +85,7 @@ elif args.log:
     if not args.page:
         raise Exception("Please specify --page for --log.")
 
-    page_id = wd.get_page_id(args.page)
+    page_id = wd.get_page_id(page_unix_name=args.page)
     if not page_id:
         raise Exception("Page not found: "+args.page)
     for rev in wd.get_revisions(page_id, args.depth):
@@ -98,7 +99,9 @@ elif args.dump:
     rm = RepoMaintainer(wd, args.dump)
     rm.debug = args.debug
     rm.storeRevIds = args.revids
-    rm.buildRevisionList([args.page] if args.page else None, args.depth)
+    rm.max_depth = args.depth
+    rm.max_page_count = args.max_page_count
+    rm.buildRevisionList([args.page] if args.page else None)
     rm.openRepo()
 
     print("Downloading revisions...")

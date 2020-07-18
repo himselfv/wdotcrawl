@@ -16,7 +16,7 @@ import re # For sanitizing usernames to fake email addresses
 
 # Usage:
 #   rm = RepoMaintainer(wikidot, path)
-#   rm.buildRevisionList(pages, depth)
+#   rm.buildRevisionList(pages)
 #   rm.openRepo()
 #   while rm.commitNext():
 #       pass
@@ -42,6 +42,12 @@ class RepoMaintainer:
 
         self.repo = None            # Git repo object
         self.index = None           # Git current index object
+        self.max_depth = 10000      # download at most this number of revisions
+        self.max_page_count = 10000 # download at most this number of pages
+
+        self.pbar = None
+        self.first_fetched = 0      # For progress bar
+        self.fetched_revids = set()
 
 
     #
@@ -90,12 +96,11 @@ class RepoMaintainer:
     #
     # Compiles a combined revision list for a given set of pages, or all pages on the site.
     #  pages: compile history for these pages
-    #  depth: download at most this number of revisions.
     #
     # If there exists a cached revision list at the repository destination,
     # it is loaded and no requests are made.
     #
-    def buildRevisionList(self, pages = None, depth = 10000):
+    def buildRevisionList(self, pages = None):
         if os.path.isfile(self.path+'/.wrevs'):
             print("Loading cached revision list...")
             self.loadWRevs()
@@ -121,10 +126,10 @@ class RepoMaintainer:
                 fp.close()
 
 
-            if not pages:
+            if not pages or len(pages) < self.max_page_count:
                 if self.debug:
                     print('Need to fetch pages')
-                pages = self.wd.list_pages(10000)
+                pages = self.wd.list_pages(self.max_page_count)
                 self.savePages(pages)
             elif self.debug:
                 print(len(pages), 'pages loaded')
@@ -170,10 +175,8 @@ class RepoMaintainer:
                 print('Page gone?', page)
                 continue
 
-            revs = self.wd.get_revisions(page_id, depth)
-            print("Revisions to fetch: " + str(len(revs)))
-            already_fetched = 0
-            for rev in revs:
+            revs = self.wd.get_revisions(page_id=page_id, limit=max_depth)
+            for rev in tqdm(revs, desc='Adding revisions from page ' + page_id):
                 if rev['id'] in self.fetched_revids:
                     already_fetched += 1
                     continue
