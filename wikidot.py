@@ -24,7 +24,7 @@ class Wikidot:
         self.sitename = urlparse(site).hostname.lower()
         self.delay = 1000        # Delay between requests in msec
         self.debug = False      # Print debug messages
-        self.next_timeslot = timer()   # Can call immediately
+        self.next_timeslot = time.process_time()   # Can call immediately
         self.max_retries = 5
         self.failed_images = set()
 
