@@ -116,8 +116,8 @@ class Wikidot:
         params['wikidot_token7'] = token
 
         if self.debug:
-            print(params)
-            print(cookies)
+            print(' - ', params)
+            print(' - ', cookies)
 
         url = self.site+'/ajax-module-connector.php'
         if urlAppend is not None:
@@ -127,16 +127,20 @@ class Wikidot:
         retries = 0
         while retries < self.max_retries:
             if retries > 0:
-                print("retry", retries, "of", self.max_retries)
+                print(" ! retry", retries, "of", self.max_retries)
 
             self._wait_request_slot()
 
+            start = timer()
             req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
+
+            if self.debug:
+                print(' * ajax request completed in', round(timer() - start, 2))
 
             # Usually a 502 error, recovers immediately
             if req.status_code >= 500:
                 retries += 1
-                print('500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
+                print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
 
                 # In case of debug enabled, we already printed this above
                 if not self.debug:
@@ -156,12 +160,12 @@ class Wikidot:
                 # some bug in how we handle or request things
                 req.raise_for_status()
             except Exception as e:
-                print('Failed to get response from wikidot', e, req, url, params)
+                print(' ! Failed to get response from wikidot', e, req, url, params)
 
             try:
                 json = req.json()
             except Exception as e:
-                print('Failed to get response from wikidot', e, req, url, params)
+                print(' ! Failed to get response from wikidot', e, req, url, params)
                 if retries < self.max_retries:
                     retries += 1
                     #self._wait_request_slot()
@@ -171,17 +175,18 @@ class Wikidot:
                 raise e
 
             if json['status'] == 'ok':
+
                 return json['body'], (json['title'] if 'title' in json else '')
             elif retries < self.max_retries:
-                print("error in response", json)
+                print(" ! error in response", json)
                 retries += 1
-                print("sleeping for", retries * retries * self.delay);
+                print(" ! sleeping for", retries * retries * self.delay);
                 #self._wait_request_slot()
                 time.sleep(retries * retries * self.delay / 1000)
             else:
                 raise Exception(req.text)
 
-        print('Failed too many times', url, params, cookies)
+        print(' ! Failed too many times', url, params, cookies)
         raise Exception('Failed too many times for ' + url)
 
     # Same but only returns the body, most responses don't have titles
@@ -219,11 +224,11 @@ class Wikidot:
                 pages.append(entry)
 
             if self.debug:
-                print('Pages found:', len(pages))
+                print(' - Pages found:', len(pages))
 
             targets = soup.find_all('span','target')
             if len(targets) < 2:
-                print("Unable to find next listing page, not enough target spans")
+                print(" ! Unable to find next listing page, not enough target spans")
                 break
 
             next_url = targets[-1].a.get('href').split('/')
@@ -231,10 +236,10 @@ class Wikidot:
                 next_page = int(next_url[-1])
 
                 if self.debug:
-                    print('Next listing page', next_page)
+                    print(' - Next listing page', next_page)
 
             else:
-                print("invalid next url", next_url)
+                print(" ! invalid next url", next_url)
                 break
 
             #next_page = int(targets[0].a.text)
@@ -244,20 +249,20 @@ class Wikidot:
                 current_page = int(current_spans[0].text)
 
                 if self.debug:
-                    print('Current listing page', current_page)
+                    print(' - Current listing page', current_page)
 
             else:
-                print("unable to find current page")
+                print(" ! unable to find current page")
                 break;
 
             if next_page != offset + 1:
                 if self.debug:
-                    print('Next page is wrong', next_page, 'hopefully at the end')
+                    print(' ! Next page is wrong', next_page, 'hopefully at the end')
                 break
 
             offset += 1
 
-            print("Fetching listing page", offset)
+            print(" - Fetching listing page", offset)
 
         return pages
 
@@ -271,9 +276,13 @@ class Wikidot:
         url = self.site+'/'+page_unix_name + '/noredirect/true';
 
         if self.debug:
-            print("fetching", url)
+            print(" > fetching", url)
 
+        start = timer()
         req = requests.request('GET', url, timeout=30)
+        if self.debug:
+            print(' * page id request completed in', round(timer() - start, 2))
+
         soup = BeautifulSoup(req.text, 'html.parser')
         for item in soup.head.find_all('script'):
             text = item.string
@@ -306,7 +315,6 @@ class Wikidot:
         })
 
         soup = BeautifulSoup(res, 'html.parser')
-        print("revisions raw")
         return soup.table.contents
 
     # Client version
@@ -323,7 +331,7 @@ class Wikidot:
             attached_file = False
             if attachment_action is not None:
                 attached_file = True
-                print("was attchment", rev_id)
+                print(" - was attchment", rev_id)
 
             # Unixtime is stored as a CSS class time_*
             rev_date = 0
@@ -333,7 +341,7 @@ class Wikidot:
                     if cls.startswith('time_'):
                         rev_date = int(cls[5:])
             else:
-                print("no odate found")
+                print(" ! no odate found")
 
             # Username in a last <a> under <span class="printuser">
             user_span = tr.find("span", attrs={"class": "printuser"})

@@ -295,6 +295,8 @@ class RepoMaintainer:
         if rev['comment'].startswith('Parent page set to: "'):
             # This is a parenting revision, remember the new parent
             parent_unixname = rev['comment'][21:-2]
+            if self.debug:
+                print('Parent changed', parent_unixname)
             self.last_parents[unixname] = parent_unixname
         else:
             # Else use last parent_unixname we've recorded
@@ -409,6 +411,9 @@ class RepoMaintainer:
     # Therefore, on every rename we must update all linked children in the same revision.
     #
     def updateChildren(self, oldunixname, newunixname):
+        if self.debug:
+            print('Updating parents for', oldunixname, newunixname)
+
         for child in list(self.last_parents.keys()):
             if self.last_parents[child] == oldunixname:
                 self.updateParentField(child, self.last_parents[child], newunixname)
