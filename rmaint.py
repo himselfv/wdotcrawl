@@ -187,7 +187,7 @@ class RepoMaintainer:
                 })
             self.saveWRevs() # Save a cached copy
 
-            print("Number of revisions already fetched", len(revs) - len(self.wrevs))
+        print("Number of revisions already fetched", len(revs) - len(self.wrevs))
 
         if os.path.isfile(self.path+'/.metadata.json'):
             self.loadMetadata()
