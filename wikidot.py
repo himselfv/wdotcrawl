@@ -67,7 +67,7 @@ class Wikidot:
 
                 # Extra nice, sleep longer (expoential increase), hope for the
                 # server to recover
-                time.sleep(retries * retries * self.delay)
+                time.sleep(retries * retries * self.delay / 1000)
 
                 continue
 
@@ -114,6 +114,9 @@ class Wikidot:
         # In case of e. g. 500 errors
         retries = 0
         while retries < self.max_retries:
+            if retries > 0:
+                print("retry", retries, "of", self.max_retries)
+
             self._wait_request_slot()
 
             req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
@@ -132,7 +135,7 @@ class Wikidot:
 
                 # Extra nice, sleep longer (expoential increase), hope for the
                 # server to recover
-                time.sleep(retries * retries * self.delay)
+                time.sleep(retries * retries * self.delay / 1000)
 
                 continue
 
@@ -149,14 +152,20 @@ class Wikidot:
                 print('Failed to get response from wikidot', e, req, url, params)
                 if retries < self.max_retries:
                     retries += 1
-                    self._wait_request_slot()
-                    time.sleep(retries * retries * self.delay)
+                    #self._wait_request_slot()
+                    time.sleep(retries * retries * self.delay / 1000)
                     continue
 
                 raise e
 
             if json['status'] == 'ok':
                 return json['body'], (json['title'] if 'title' in json else '')
+            elif retries < self.max_retries:
+                print("error in response", json)
+                retries += 1
+                print("sleeping for", retries * retries * self.delay);
+                #self._wait_request_slot()
+                time.sleep(retries * retries * self.delay / 1000)
             else:
                 raise Exception(req.text)
 
