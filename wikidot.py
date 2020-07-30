@@ -22,7 +22,7 @@ class Wikidot:
         if self.site[-1] == '/':
             self.site = self.site[:-1]
         self.sitename = urlparse(site).hostname.lower()
-        self.delay = 200        # Delay between requests in msec
+        self.delay = 1000        # Delay between requests in msec
         self.debug = False      # Print debug messages
         self.next_timeslot = timer()   # Can call immediately
         self.max_retries = 5
