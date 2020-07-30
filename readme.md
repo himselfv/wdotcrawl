@@ -39,3 +39,8 @@ The descriptions for on-site modules are heavily correlated with AJAX ones:
 Someone else did Wikidot AJAX:
 
 * https://github.com/kerel-fs/ogn-rdb/blob/master/wikidotcrawler.py
+
+
+#### TODO
+
+Handle deleted images.
