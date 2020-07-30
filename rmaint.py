@@ -315,6 +315,11 @@ class RepoMaintainer:
         else:
             # Else use last parent_unixname we've recorded
             parent_unixname =  self.last_parents[unixname] if unixname in self.last_parents else None
+
+        ## TODO: test
+        #if rev['comment'].startswith('Removed tags: ') or rev['comment'].startswith('Added tags: '):
+        #    self.updateTags(rev['comment'], rev_unixname)
+
         # There are also problems when parent page gets renamed -- see updateChildren
 
         # If the page is tracked and its name just changed, tell Git
@@ -440,6 +445,48 @@ class RepoMaintainer:
         for child in list(self.last_parents.keys()):
             if self.last_parents[child] == oldunixname and self.last_parents[child] != newunixname:
                 self.updateParentField(child, self.last_parents[child], newunixname)
+
+    def updateTags(self, comment, unixname):
+        file_name = self.path+'/'+unixname+'.txt'
+        removed = []
+        removed_match = re.search(pattern = r'Removed tags: ([^.]+,?)\.')
+        if removed_match is not None:
+            removed = removed_match.group(1).split(', ')
+
+        tags = []
+
+        with codecs.open(file_name, "r", "UTF-8") as f:
+            content = f.readlines()
+
+        tagsline = None
+        for line in content:
+            if line.startswith('tags:'):
+                tagsline = line
+                break
+
+        # Father forgive me for the indentation depth
+        idx = -1
+        if tagsline is not None:
+            idx = content.index(tagsline)
+            for tag in tagsline.split(','):
+                if not tag in removed:
+                    tags.append(tag)
+
+
+        added_match = re.search(pattern = r'Added tags: ([^.]+,?)\.')
+        if added_match is not None:
+            tags += added_match.group(1).split(', ')
+
+        tags.sort()
+
+        newtagsline = 'tags:' + ','.join(tags) + '\n'
+        if idx != -1:
+            contents[idx] = newtagsline
+        else:
+            contents = newtagsline + contents
+
+        with codecs.open(file_name, "w", "UTF-8") as f:
+            f.writelines(content)
 
     #
     # Processes a page file and updates "parent:..." string to reflect a change in parent's unixname.
