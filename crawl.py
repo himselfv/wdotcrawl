@@ -27,6 +27,7 @@ parser.add_argument('--log-raw', action='store_true')
 parser.add_argument('--page', type=str, help='Query only this page')
 parser.add_argument('--depth', type=int, default='10000', help='Query only last N revisions')
 parser.add_argument('--revids', action='store_true', help='Store last revision ids in the repository', default=True)
+parser.add_argument('--skip', type=str, help='Skip the specified revision')
 # Common settings
 parser.add_argument('--debug', action='store_true', help='Print debug info')
 parser.add_argument('--delay', type=int, default='200', help='Delay between consequent calls to Wikidot')
@@ -103,6 +104,9 @@ elif args.dump:
     rm.max_page_count = args.max_page_count
     rm.buildRevisionList([args.page] if args.page else None)
     rm.openRepo()
+
+    if args.skip:
+        rm.revs_to_skip = [args.skip]
 
     print("Downloading revisions")
     rm.fetchAll()

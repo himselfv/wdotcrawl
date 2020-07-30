@@ -50,6 +50,8 @@ class RepoMaintainer:
         self.first_fetched = 0      # For progress bar
         self.fetched_revids = set()
 
+        self.revs_to_skip = []
+
 
     #
     # Saves and loads revision list from file
@@ -267,6 +269,10 @@ class RepoMaintainer:
             self.rev_no += 1
 
             self.saveState() # Update operation state
+            return True
+
+        if rev['rev_id'] in self.revs_to_skip:
+            print("Skipping", rev)
             return True
 
         source = self.wd.get_revision_source(rev['rev_id'])
