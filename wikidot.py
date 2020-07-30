@@ -58,7 +58,15 @@ class Wikidot:
             # Makes wikimedia happy
             headers.update({ "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0 wdotcrawler/1.0"})
             start = timer()
-            req = requests.get(url, stream=True, timeout=30)
+
+            try:
+                req = requests.get(url, stream=True, timeout=30)
+            except requests.exceptions.ReadTimeout:
+                print('request timed out!')
+
+                retries += 1
+                time.sleep(retries * retries * self.delay / 1000)
+                continue
 
             if req.status_code == 404:
                 self.failed_images.add(url)
@@ -140,7 +148,13 @@ class Wikidot:
             self._wait_request_slot()
 
             start = timer()
-            req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
+            try:
+                req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
+            except requests.exceptions.ReadTimeout:
+                print('request timed out!')
+                retries += 1
+                time.sleep(retries * retries * self.delay / 1000)
+                continue
 
             if self.debug:
                 print(' * ajax request completed in', round(timer() - start, 2))
@@ -287,7 +301,26 @@ class Wikidot:
             print(" > fetching", url)
 
         start = timer()
-        req = requests.request('GET', url, timeout=30)
+        retries = 0
+        req = None
+        while retries < self.max_retries:
+            try:
+                req = requests.request('GET', url, timeout=30)
+            except requests.exceptions.ReadTimeout:
+                print('request timed out!')
+                retries += 1
+                time.sleep(retries * retries * self.delay / 1000)
+                continue
+
+            if req.status_code >= 500:
+                print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
+                retries += 1
+                time.sleep(retries * retries * self.delay / 1000)
+                continue
+
+            req.raise_for_status()
+            break
+
         if self.debug:
             print(' * page id request completed in', round(timer() - start, 2))
 
