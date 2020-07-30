@@ -162,7 +162,6 @@ class RepoMaintainer:
 
             if self.debug:
                 print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
-            fetched += 1
             page_id = self.wd.get_page_id(page)
 
             if self.debug:
@@ -174,6 +173,7 @@ class RepoMaintainer:
 
             revs = self.wd.get_revisions(page_id=page_id, limit=max_depth)
             for rev in tqdm(revs, desc='Adding revisions from page ' + page_id):
+                fetched += 1
                 if rev['id'] in self.fetched_revids:
                     continue
 
@@ -187,7 +187,7 @@ class RepoMaintainer:
                 })
             self.saveWRevs() # Save a cached copy
 
-        print("Number of revisions already fetched", len(revs) - len(self.wrevs))
+        print("Number of revisions already fetched", len(self.fetched_revids), len(self.wrevs))
 
         if os.path.isfile(self.path+'/.metadata.json'):
             self.loadMetadata()
