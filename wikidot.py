@@ -8,6 +8,8 @@ import pathlib
 import hashlib
 import os
 import shutil
+import imghdr
+from timeit import default_timer as timer
 
 # Implements various queries to Wikidot engine through its AJAX facilities
 
@@ -22,23 +24,23 @@ class Wikidot:
         self.sitename = urlparse(site).hostname.lower()
         self.delay = 200        # Delay between requests in msec
         self.debug = False      # Print debug messages
-        self.next_timeslot = time.process_time()   # Can call immediately
+        self.next_timeslot = timer()   # Can call immediately
         self.max_retries = 5
 
     # Downloads file if it doesn't exist
     def maybe_download_file(self, url, file_path):
         if os.path.exists(file_path):
             if self.debug:
-                print(file_path, "exists, skipping")
+                print(" - ", file_path, "exists, skipping")
             return False
 
-        self._wait_request_slot()
+        #self._wait_request_slot()
 
         dirpath = os.path.dirname(file_path)
         os.makedirs(dirpath, exist_ok=True)
 
         if self.debug:
-            print("downloading", url, "to" ,file_path, "dirpath", dirpath)
+            print(" < downloading", url, "to" ,file_path, "dirpath", dirpath)
 
         # In case of e. g. 500 errors
         retries = 0
@@ -49,6 +51,7 @@ class Wikidot:
             # Pretty generic user-agent, but we append a unique none for us
             # Makes wikimedia happy
             headers.update({ "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0 wdotcrawler/1.0"})
+            start = timer()
             req = requests.get(url, stream=True, timeout=30)
 
             if req.status_code == 404:
@@ -56,11 +59,11 @@ class Wikidot:
 
             if req.status_code >= 500:
                 retries += 1
-                print('500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
+                print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
 
                 # In case of debug enabled, we already printed this above
                 if not self.debug:
-                    print(req)
+                    print(' - ', req)
 
                 # Be nice, double wait delay for errors
                 self._wait_request_slot()
@@ -80,9 +83,18 @@ class Wikidot:
                 with open(file_path, 'wb') as out_file:
                     shutil.copyfileobj(req.raw, out_file)
 
+                if imghdr.what(file_path) is None:
+                    print('Downloaded invalid image', url)
+                    os.remove(file_path)
+                    return False
+
+
+                if self.debug:
+                    print(" - downloaded file size", os.path.getsize(file_path), "in", round(timer() - start, 2))
+
                 return True
             except Exception as e:
-                print('Failed to download', e, req, url)
+                print(' ! Failed to download', e, req, url)
                 raise e
 
         return False
