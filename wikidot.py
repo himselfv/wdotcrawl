@@ -49,7 +49,7 @@ class Wikidot:
             # Pretty generic user-agent, but we append a unique none for us
             # Makes wikimedia happy
             headers.update({ "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0 wdotcrawler/1.0"})
-            req = requests.get(url, stream=True, )
+            req = requests.get(url, stream=True, timeout=30)
 
             if req.status_code == 404:
                 return False
@@ -116,7 +116,7 @@ class Wikidot:
         while retries < self.max_retries:
             self._wait_request_slot()
 
-            req = requests.request('POST', url, data=params, cookies=cookies)
+            req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
 
             # Usually a 502 error, recovers immediately
             if req.status_code >= 500:
@@ -252,7 +252,7 @@ class Wikidot:
         if self.debug:
             print("fetching", url)
 
-        req = requests.request('GET', url)
+        req = requests.request('GET', url, timeout=30)
         soup = BeautifulSoup(req.text, 'html.parser')
         for item in soup.head.find_all('script'):
             text = item.string
