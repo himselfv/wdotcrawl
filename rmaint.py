@@ -151,8 +151,7 @@ class RepoMaintainer:
                 print(len(pages), 'pages loaded')
 
         fetched_pages = set()
-        # TODO: I don't know python, but this is highly suboptimal (and takes a ton of time)
-        # Should use a set/hashmap/whatever python calls it
+
         for wrev in tqdm(self.wrevs, desc='Collecting pages we already got revisions for'):
             page_name = wrev['page_name']
 
@@ -175,8 +174,7 @@ class RepoMaintainer:
                     print("Skipping", page)
                 continue
 
-            if self.debug:
-                print("Querying page: " + page + " " + str(fetched) + "/" + str(len(pages) - len(fetched_pages)))
+            fetched += 1
             page_id = self.wd.get_page_id(page)
 
             if self.debug:
@@ -186,9 +184,8 @@ class RepoMaintainer:
                 print('Page gone?', page)
                 continue
 
-            revs = self.wd.get_revisions(page_id=page_id, limit=max_depth)
-            for rev in tqdm(revs, desc='Adding revisions from page ' + page_id):
-                fetched += 1
+            revs = self.wd.get_revisions(page_id=page_id, limit=self.max_depth)
+            for rev in revs:
                 if rev['id'] in self.fetched_revids:
                     continue
 
