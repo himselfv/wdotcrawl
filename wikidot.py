@@ -51,6 +51,9 @@ class Wikidot:
             headers.update({ "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10.9; rv:32.0) Gecko/20100101 Firefox/32.0 wdotcrawler/1.0"})
             req = requests.get(url, stream=True, )
 
+            if req.status_code == 404:
+                return False
+
             if req.status_code >= 500:
                 retries += 1
                 print('500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
