@@ -16,6 +16,8 @@ At least:
 * Python 3
 * python-beautifulsoup4
 * python-gitpython
+* python-requests
+* python-tqdm
 
 ##### Examples:
 
