@@ -361,11 +361,18 @@ class RepoMaintainer:
             commit_date = None
 
         got_images = False;
+
+        # Add some spacing in the commit message
+        if len(details['images']) > 0:
+            commit_msg += '\n'
+
         for image in details['images']:
             if self.wd.maybe_download_file(image['src'], self.path + '/' + image['filepath']):
+                commit_msg += '\nAdded image: ' + image['src']
                 got_images = True
                 # If we do this gitpython barfs on itself
                 #added_file_paths.append(image['filepath'])
+
 
         if got_images:
             added_file_paths.append("images")
