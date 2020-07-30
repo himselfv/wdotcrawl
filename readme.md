@@ -43,4 +43,6 @@ Someone else did Wikidot AJAX:
 
 #### TODO
 
-Handle deleted images.
+ - Handle deleted images. Probably need to check the diff and check all pages for references if removed from one page.
+ - Handle tags (both added and removed).
+
