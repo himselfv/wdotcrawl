@@ -190,16 +190,13 @@ class Wikidot:
                 raise e
 
             if json['status'] == 'ok':
-
                 return json['body'], (json['title'] if 'title' in json else '')
-            elif retries < self.max_retries:
-                print(" ! error in response", json)
-                retries += 1
-                print(" ! sleeping for", retries * retries * self.delay);
-                #self._wait_request_slot()
-                time.sleep(retries * retries * self.delay / 1000)
             else:
-                raise Exception(req.text)
+                print(" ! error in response", json)
+
+                retries += 1
+                time.sleep(retries * retries * self.delay / 1000)
+                continue
 
         print(' ! Failed too many times', url, params, cookies)
         raise Exception('Failed too many times for ' + url)
@@ -431,7 +428,6 @@ class Wikidot:
     def get_revision_version(self, rev_id):
         res = self.get_revision_version_raw(rev_id) # this has title!
         soup = BeautifulSoup(res[0], 'html.parser')
-
 
         # Extract list of images
 
