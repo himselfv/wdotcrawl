@@ -73,20 +73,13 @@ class Wikidot:
                 return False
 
             if req.status_code >= 500:
-                retries += 1
                 print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
-
                 # In case of debug enabled, we already printed this above
                 if not self.debug:
                     print(' - ', req)
 
-                # Be nice, double wait delay for errors
-                self._wait_request_slot()
-
-                # Extra nice, sleep longer (expoential increase), hope for the
-                # server to recover
+                retries += 1
                 time.sleep(retries * retries * self.delay / 1000)
-
                 continue
 
             try:
