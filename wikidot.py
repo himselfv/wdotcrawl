@@ -113,7 +113,7 @@ class Wikidot:
                 print(' ! Failed to download', e, req, url)
                 raise e
 
-        return False
+        raise Exception('Failed too many times for', url)
 
     # To honor usage rules, we wait for self.delay between requests.
     # Low-level query functions call this before every request to Wikidot./
@@ -339,7 +339,8 @@ class Wikidot:
                     return int(text[pos:crlf])
                 else:
                     return int(text[pos:])
-        return None
+
+        raise Exception('Failed to get page_id for ' + page_unix_name)
 
 
     # Retrieves a list of revisions for a page.
@@ -499,6 +500,9 @@ class Wikidot:
             if len(tds) < 2: continue
             if tds[0].getText().strip() == 'Page name:':
                 unixname = tds[1].getText().strip()
+
+        if unixname is None:
+            raise Exception('Failed to find unixname for ' + rev_id)
 
         return {
           'rev_id': rev_id,
