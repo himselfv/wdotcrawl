@@ -415,7 +415,7 @@ class RepoMaintainer:
             print('Updating parents for', oldunixname, newunixname)
 
         for child in list(self.last_parents.keys()):
-            if self.last_parents[child] == oldunixname:
+            if self.last_parents[child] == oldunixname and self.last_parents[child] != newunixname:
                 self.updateParentField(child, self.last_parents[child], newunixname)
 
     #
