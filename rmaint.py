@@ -79,6 +79,19 @@ class RepoMaintainer:
     def loadFetchedRevids(self):
         self.fetched_revids = set([line.rstrip() for line in open(self.path+'/.fetched.txt', 'r')])
 
+    def saveFailedImages(self):
+        file_path = self.path + '/.failed-images.txt'
+        fp = open(file_path, 'w')
+        for failed in self.wd.failed_images:
+            fp.write(failed + '\n')
+        fp.close()
+
+    def loadFailedImages(self):
+        file_path = self.path + '/.failed-images.txt'
+        if not os.path.isfile(file_path):
+            return
+        self.self.wd.failed_images = set([line.rstrip() for line in open(file_path, 'r')])
+
     # Persistent metadata about the repo:
     #  - Tracks page renames: name atm -> last name in repo
     #  - Tracks page parent names: name atm -> last parent in repo
@@ -237,6 +250,7 @@ class RepoMaintainer:
         # Create a new repository or continue from aborted dump
         self.last_names = {} # Tracks page renames: name atm -> last name in repo
         self.last_parents = {} # Tracks page parent names: name atm -> last parent in repo
+        self.loadFailedImages()
 
         if os.path.isdir(self.path+'/.git'):
             print("Continuing from aborted dump state...")
@@ -372,6 +386,8 @@ class RepoMaintainer:
                 got_images = True
                 # If we do this gitpython barfs on itself
                 #added_file_paths.append(image['filepath'])
+            else:
+                self.saveFailedImages()
 
 
         if got_images:

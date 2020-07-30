@@ -26,9 +26,15 @@ class Wikidot:
         self.debug = False      # Print debug messages
         self.next_timeslot = timer()   # Can call immediately
         self.max_retries = 5
+        self.failed_images = set()
 
     # Downloads file if it doesn't exist
     def maybe_download_file(self, url, file_path):
+        if url in self.failed_images:
+            if self.debug:
+                print(" ! ", url, "already failed, skipping")
+            return False
+
         if os.path.exists(file_path):
             if self.debug:
                 print(" - ", file_path, "exists, skipping")
@@ -55,6 +61,7 @@ class Wikidot:
             req = requests.get(url, stream=True, timeout=30)
 
             if req.status_code == 404:
+                self.failed_images.add(url)
                 return False
 
             if req.status_code >= 500:
@@ -86,6 +93,7 @@ class Wikidot:
                 if imghdr.what(file_path) is None:
                     print('Downloaded invalid image', url)
                     os.remove(file_path)
+                    self.failed_images.add(url)
                     return False
 
 
