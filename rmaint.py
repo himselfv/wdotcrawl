@@ -236,7 +236,7 @@ class RepoMaintainer:
         self.last_names = {} # Tracks page renames: name atm -> last name in repo
         self.last_parents = {} # Tracks page parent names: name atm -> last parent in repo
 
-        if os.path.isfile(self.path+'/.git'):
+        if os.path.isdir(self.path+'/.git'):
             print("Continuing from aborted dump state...")
             self.loadState()
             self.repo = Repo(self.path)
