@@ -90,7 +90,7 @@ class RepoMaintainer:
         file_path = self.path + '/.failed-images.txt'
         if not os.path.isfile(file_path):
             return
-        self.self.wd.failed_images = set([line.rstrip() for line in open(file_path, 'r')])
+        self.wd.failed_images = set([line.rstrip() for line in open(file_path, 'r')])
 
     # Persistent metadata about the repo:
     #  - Tracks page renames: name atm -> last name in repo
