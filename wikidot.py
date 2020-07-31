@@ -65,7 +65,7 @@ class Wikidot:
                 print('request timed out!')
 
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries) # up to ~2 minutes
                 continue
 
             if req.status_code == 404:
@@ -79,7 +79,7 @@ class Wikidot:
                     print(' - ', req)
 
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
                 continue
 
             try:
@@ -146,7 +146,7 @@ class Wikidot:
             except requests.exceptions.ReadTimeout:
                 print('request timed out!')
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
                 continue
 
             if self.debug:
@@ -166,7 +166,7 @@ class Wikidot:
 
                 # Extra nice, sleep longer (expoential increase), hope for the
                 # server to recover
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
 
                 continue
 
@@ -184,7 +184,7 @@ class Wikidot:
                 if retries < self.max_retries:
                     retries += 1
                     #self._wait_request_slot()
-                    time.sleep(retries * retries * self.delay / 1000)
+                    time.sleep(retries * retries * retries)
                     continue
 
                 raise e
@@ -195,7 +195,7 @@ class Wikidot:
                 print(" ! error in response", json)
 
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
                 continue
 
         print(' ! Failed too many times', url, params, cookies)
@@ -299,13 +299,13 @@ class Wikidot:
             except requests.exceptions.ReadTimeout:
                 print('request timed out!')
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
                 continue
 
             if req.status_code >= 500:
                 print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
                 retries += 1
-                time.sleep(retries * retries * self.delay / 1000)
+                time.sleep(retries * retries * retries)
                 continue
 
             req.raise_for_status()
