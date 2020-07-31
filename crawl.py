@@ -28,6 +28,7 @@ parser.add_argument('--page', type=str, help='Query only this page')
 parser.add_argument('--depth', type=int, default='10000', help='Query only last N revisions')
 parser.add_argument('--revids', action='store_true', help='Store last revision ids in the repository', default=True)
 parser.add_argument('--skip', type=str, help='Skip the specified revision')
+parser.add_argument('--cleanup', action='store_true', help='Clean up after downloading repo')
 # Common settings
 parser.add_argument('--debug', action='store_true', help='Print debug info')
 parser.add_argument('--delay', type=int, default='200', help='Delay between consequent calls to Wikidot')
@@ -111,5 +112,7 @@ elif args.dump:
     print("Downloading revisions")
     rm.fetchAll()
 
-    rm.cleanup()
+    if args.cleanup:
+        rm.cleanup()
+
     print("Done.")
