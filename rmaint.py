@@ -264,8 +264,8 @@ class RepoMaintainer:
 
             if self.storeRevIds:
                 # Add revision id file to the new repo
-                fname = self.path + '/.revid'
-                codecs.open(self.path + fname, "w", "UTF-8").close()
+                fname = '.revid'
+                codecs.open(self.path + '/' + fname, "w", "UTF-8").close()
                 self.repo.index.add([fname])
                 self.index.commit("Initial creation of repo")
         self.index = self.repo.index
