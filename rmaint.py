@@ -445,6 +445,33 @@ class RepoMaintainer:
             if self.last_parents[child] == oldunixname and self.last_parents[child] != newunixname:
                 self.updateParentField(child, self.last_parents[child], newunixname)
 
+    #
+    # Processes a page file and updates "parent:..." string to reflect a change in parent's unixname.
+    # The rest of the file is preserved.
+    #
+    def updateParentField(self, child_unixname, parent_oldunixname, parent_newunixname):
+        child_path = self.path+'/'+child_unixname+'.txt'
+
+        ## TODO: find out when this happens
+        # The child name is gotten from the commit message, so not very reliable
+        if not os.path.isfile(child_path):
+            print('Failed to find child file!', child_path)
+            return
+        with codecs.open(child_path, "r", "UTF-8") as f:
+            content = f.readlines()
+        # Since this is all tracked by us, we KNOW there's a line in standard format somewhere
+        idx = content.index('parent:'+parent_oldunixname+'\n')
+        if idx < 0:
+            raise Exception("Cannot update child page "+child_unixname+": "
+                +"it is expected to have parent set to "+parent_oldunixname+", but there seems to be no such record in it.");
+        content[idx] = 'parent:'+parent_newunixname+'\n'
+        with codecs.open(self.path+'/'+child_unixname+'.txt', "w", "UTF-8") as f:
+            f.writelines(content)
+
+    #
+    # Updates the tags field in the file
+    # Not used (yet)
+    #
     def updateTags(self, comment, unixname):
         file_name = self.path+'/'+unixname+'.txt'
         removed = []
@@ -485,28 +512,6 @@ class RepoMaintainer:
             contents = newtagsline + contents
 
         with codecs.open(file_name, "w", "UTF-8") as f:
-            f.writelines(content)
-
-    #
-    # Processes a page file and updates "parent:..." string to reflect a change in parent's unixname.
-    # The rest of the file is preserved.
-    #
-    def updateParentField(self, child_unixname, parent_oldunixname, parent_newunixname):
-        child_path = self.path+'/'+child_unixname+'.txt'
-
-        ## TODO: find out when this happens
-        if not os.path.isfile(child_path):
-            print('Failed to find child file!', child_path)
-            return
-        with codecs.open(child_path, "r", "UTF-8") as f:
-            content = f.readlines()
-        # Since this is all tracked by us, we KNOW there's a line in standard format somewhere
-        idx = content.index('parent:'+parent_oldunixname+'\n')
-        if idx < 0:
-            raise Exception("Cannot update child page "+child_unixname+": "
-                +"it is expected to have parent set to "+parent_oldunixname+", but there seems to be no such record in it.");
-        content[idx] = 'parent:'+parent_newunixname+'\n'
-        with codecs.open(self.path+'/'+child_unixname+'.txt', "w", "UTF-8") as f:
             f.writelines(content)
 
 
