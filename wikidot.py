@@ -396,6 +396,45 @@ class Wikidot:
             })
         return revs
 
+    # topics in forum: http://www.scp-wiki.net/forum/c-###/sort/start
+    # -> div class 'title'
+    #   -> a href= http://www.scp-wiki.net/forum/t-####/foobar (foobar not important)
+
+    # posts in topic http://www.scp-wiki.net/forum/t-####/
+    # -> div id 'thread-container'
+    #   -> div class 'post-container'
+    #       -> div class = 'post', id = 'post-####'
+    #           -> div class 'title'
+    #           -> div class 'content'
+    #   -> div class 'post-container'
+    #       -> ...
+    #       -> div class 'post-container'
+    #           -> ...
+
+    #def get_forum_post_revisions(self, post_id):
+    #    res = self.query({
+    #      'moduleName': 'forum/sub/ForumPostRevisionsModule',
+    #      'postId': post_id,
+    #    })
+    #    revisions = []
+    #    soup = BeautifulSoup(res, 'html.parser')
+    #    for row in soup.find_all("tr"):
+    #        columns = row.find_all("td")
+
+    #        if len(columns) != 3:
+    #            raise Exception('Invalid row in post history for ' + str(post_id))
+
+    #        user = columns[0].find('a').getText()
+    #        time = columns[1].find('span').getText()
+    #        rev_id_js = columns[0].find('a')['href']
+    #        match = re.search(r'showRevision\(event, ([0-9]+)\)', rev_id_js)
+    #        rev_id = match.group(1)
+
+    #        revisions.append({
+    #            'id': rev_id,
+    #            'user': user,
+    #            'time': time,
+    #            })
 
     # Retrieves revision source for a revision.
     # There's no raw version because there's nothing else in raw.
