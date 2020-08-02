@@ -492,7 +492,13 @@ class RepoMaintainer:
     # The rest of the file is preserved.
     #
     def updateParentField(self, child_unixname, parent_oldunixname, parent_newunixname):
-        with codecs.open(self.path+'/'+child_unixname+'.txt', "r", "UTF-8") as f:
+        child_path = self.path+'/'+child_unixname+'.txt'
+
+        ## TODO: find out when this happens
+        if not os.path.isfile(child_path):
+            print('Failed to find child file!', child_path)
+            return
+        with codecs.open(child_path, "r", "UTF-8") as f:
             content = f.readlines()
         # Since this is all tracked by us, we KNOW there's a line in standard format somewhere
         idx = content.index('parent:'+parent_oldunixname+'\n')
