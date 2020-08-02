@@ -233,6 +233,8 @@ class RepoMaintainer:
         fp.close()
     
     def loadState(self):
+        if not os.path.isfile(self.path+'/.wstate'):
+            return
         fp = open(self.path+'/.wstate', 'rb')
         self.rev_no = pickle.load(fp)
         fp.close()
