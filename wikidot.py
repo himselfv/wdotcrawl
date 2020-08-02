@@ -61,7 +61,7 @@ class Wikidot:
 
             try:
                 req = requests.get(url, stream=True, timeout=30)
-            except requests.exceptions.ReadTimeout:
+            except requests.exceptions.RequestException:
                 print('request timed out!')
 
                 retries += 1
@@ -143,7 +143,7 @@ class Wikidot:
             start = timer()
             try:
                 req = requests.request('POST', url, data=params, cookies=cookies, timeout=30)
-            except requests.exceptions.ReadTimeout:
+            except requests.exceptions.RequestException:
                 print('request timed out!')
                 retries += 1
                 time.sleep(retries * retries * retries)
@@ -296,7 +296,7 @@ class Wikidot:
         while retries < self.max_retries:
             try:
                 req = requests.request('GET', url, timeout=30)
-            except requests.exceptions.ReadTimeout:
+            except requests.exceptions.RequestException:
                 print('request timed out!')
                 retries += 1
                 time.sleep(retries * retries * retries)
