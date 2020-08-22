@@ -110,7 +110,7 @@ elif args.dump:
     if args.skip_pages:
         rm.pages_to_skip = args.skip_pages.split(",")
     if args.skip:
-        rm.revs_to_skip = [args.skip]
+        rm.revs_to_skip = args.skip.split(",")
 
     print("Downloading revisions")
     rm.fetchAll()
