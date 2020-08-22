@@ -42,8 +42,15 @@ class Wikidot:
 
         #self._wait_request_slot()
 
-        dirpath = os.path.dirname(file_path)
-        os.makedirs(dirpath, exist_ok=True)
+        try:
+            dirpath = os.path.dirname(file_path)
+            os.makedirs(dirpath, exist_ok=True)
+        except OSError as e:
+            if e.errno == 36:
+                print("Path too long", e)
+                return False
+            else:
+                raise  # re-raise previously caught exception
 
         if self.debug:
             print(" < downloading", url, "to" ,file_path, "dirpath", dirpath)
@@ -62,15 +69,17 @@ class Wikidot:
             try:
                 req = requests.get(url, stream=True, timeout=30)
             except requests.exceptions.RequestException:
-                print('request timed out!')
+                print('request exception')
 
                 retries += 1
                 time.sleep(retries * retries * retries) # up to ~2 minutes
                 continue
+            except urllib3.exceptions.ReadTimeoutError:
+                print('read timeout')
 
-            if req.status_code == 404:
-                self.failed_images.add(url)
-                return False
+                retries += 1
+                time.sleep(retries * retries * retries) # up to ~2 minutes
+                continue
 
             if req.status_code >= 500:
                 print(' ! 500 error for ' + url + ', retries ' + str(retries) + '/' + str(self.max_retries))
@@ -81,6 +90,10 @@ class Wikidot:
                 retries += 1
                 time.sleep(retries * retries * retries)
                 continue
+
+            if req.status_code >= 400:
+                self.failed_images.add(url)
+                return False
 
             try:
                 # In case of 404 errors or other stuff that indicates
@@ -102,11 +115,18 @@ class Wikidot:
                     print(" - downloaded file size", os.path.getsize(file_path), "in", round(timer() - start, 2))
 
                 return True
+            except OSError as e:
+                if e.errno == 36:
+                    print("Filename to long", e)
+                    return False
+                else:
+                    raise  # re-raise previously caught exception
             except Exception as e:
                 print(' ! Failed to download', e, req, url)
                 raise e
 
-        raise Exception('Failed too many times for', url)
+        print('Failed too many times for', url)
+        return False
 
     # To honor usage rules, we wait for self.delay between requests.
     # Low-level query functions call this before every request to Wikidot./
