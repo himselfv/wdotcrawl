@@ -51,6 +51,7 @@ class RepoMaintainer:
         self.fetched_revids = set()
 
         self.revs_to_skip = []
+        self.pages_to_skip = []
 
 
     #
@@ -288,6 +289,11 @@ class RepoMaintainer:
             print("Skipping", rev)
             return True
 
+        unixname = rev['page_name']
+        if unixname in self.pages_to_skip:
+            print("Skipping", rev)
+            return True
+
         source = self.wd.get_revision_source(rev['rev_id'])
         # Page title and unix_name changes are only available through another request:
         details = self.wd.get_revision_version(rev['rev_id'])
@@ -300,7 +306,6 @@ class RepoMaintainer:
             outp.write(rev['rev_id']) # rev_ids are unique amongst all pages, and only one page changes in each commit anyway
             outp.close()
 
-        unixname = rev['page_name']
         rev_unixname = details['unixname'] # may be different in revision than atm
 
         # Unfortunately, there's no exposed way in Wikidot to see page breadcrumbs at any point in history.
